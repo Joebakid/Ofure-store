@@ -10,6 +10,7 @@ import AdminProducts from "./admin/pages/AdminProducts";
 import RequireAuth from "./components/RequireAuth";
 import CartModal from "./components/CartModal";
 import Footer from "./components/Footer";
+import { Analytics } from "@vercel/analytics/react"
 
 export default function App() {
   return (
@@ -46,6 +47,7 @@ export default function App() {
         {/* Footer always at bottom */}
         <Footer className="mt-auto" />
       </div>
+      <Analytics/>
     </BrowserRouter>
   );
 }
