@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 
 export default function Footer({
   className = "",
-  whatsAppNumber = "+234 805 471 7837",
+  whatsAppNumber = "2348140588890",
   fixed = false,
 }) {
   const digits = whatsAppNumber.replace(/[^\d]/g, "");

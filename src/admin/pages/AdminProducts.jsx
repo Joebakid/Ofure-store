@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../../lib/supabase";
 
@@ -9,6 +10,7 @@ import Loader from "../../components/Loader";
 
 export default function AdminProducts() {
   const navigate = useNavigate();
+  const [formKey, setFormKey] = useState(0);
 
   const {
     products,
@@ -23,33 +25,45 @@ export default function AdminProducts() {
     navigate("/login");
   }
 
+  async function handleCreate(product, imageFile) {
+    await createProduct(product, imageFile);
+
+    // 🔥 Reset form after successful create
+    setFormKey((k) => k + 1);
+  }
+
   return (
-    <div className="p-6 max-w-6xl mx-auto">
+    <div className="p-4 sm:p-6 max-w-6xl mx-auto overflow-x-hidden">
       {/* TOP BAR */}
-      <div className="flex items-center justify-between mb-6">
-        {/* CONSISTENT BACK */}
+      <div className="flex items-center justify-between gap-4 mb-6">
         <BackButton to="/shop" />
 
         <button
           onClick={handleLogout}
-          className="px-4 py-2 rounded bg-pink-500 text-white"
+          className="px-4 py-2 rounded bg-pink-500 text-white shrink-0"
         >
           Logout
         </button>
       </div>
 
       {/* ADD PRODUCT */}
-      <ProductForm onCreate={createProduct} loading={loading} />
+      <ProductForm
+        key={formKey}
+        onCreate={handleCreate}
+        loading={loading}
+      />
 
       {loading && <Loader />}
 
       {/* PRODUCTS */}
-      <ProductTable
-        products={products}
-        loading={loading}
-        onDelete={deleteProduct}
-        onUpdate={updateProduct}
-      />
+      <div className="overflow-x-hidden">
+        <ProductTable
+          products={products}
+          loading={loading}
+          onDelete={deleteProduct}
+          onUpdate={updateProduct}
+        />
+      </div>
     </div>
   );
 }
