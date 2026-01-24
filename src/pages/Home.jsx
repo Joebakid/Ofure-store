@@ -1,10 +1,10 @@
 import { useNavigate } from "react-router-dom";
-import ProductCard from "../components/ProductCard";
+import { BsStars } from "react-icons/bs";
+import { HiHeart } from "react-icons/hi";
 
 const products = [
   {
     name: "Forever Aloe Vera Gel",
-    price: "25000",
     category: "Forever Living",
     description: "Supports digestion & immunity",
     image:
@@ -12,7 +12,6 @@ const products = [
   },
   {
     name: "Pink Crop Shirt",
-    price: "15000",
     category: "Shirts",
     description: "Soft, comfy & stylish",
     image:
@@ -20,7 +19,6 @@ const products = [
   },
   {
     name: "Forever Bright Toothgel",
-    price: "18000",
     category: "Forever Living",
     description: "Gentle whitening & fresh breath care",
     image:
@@ -28,16 +26,61 @@ const products = [
   },
 ];
 
-
 export default function Home() {
   const navigate = useNavigate();
 
   return (
     <div className="flex justify-center">
-      {/* 🌸 PAGE CONTAINER */}
       <div className="w-full max-w-6xl px-6">
+
+        {/* 🌈 LOGO HEADER */}
+        <div className="pt-10 pb-6 flex justify-center">
+          <button
+            onClick={() => navigate("/")}
+            className="
+              group flex items-center gap-3
+              px-6 py-3 rounded-full
+              bg-white/70 backdrop-blur
+              shadow-md hover:shadow-xl
+              transition hover:scale-[1.03]
+            "
+          >
+            {/* Icon bubble */}
+            <div className="
+              w-11 h-11 rounded-full
+              bg-gradient-to-br from-mauve to-lavender
+              flex items-center justify-center
+              text-white text-xl shadow
+              group-hover:rotate-12 transition
+            ">
+              <BsStars />
+            </div>
+
+            {/* Brand text */}
+            <div className="text-left leading-tight">
+              <div className="flex items-center gap-2">
+                <h1 className="font-semibold text-lg tracking-tight">
+                  LiveOutLoud
+                </h1>
+
+                {/* LOL Badge */}
+                <span className="
+                  text-[10px] px-2 py-0.5 rounded-full
+                  bg-peach/60 font-medium
+                ">
+                  LOL
+                </span>
+              </div>
+
+              <p className="text-[11px] opacity-70 flex items-center gap-1">
+                Express your glow <HiHeart className="text-pink-400" />
+              </p>
+            </div>
+          </button>
+        </div>
+
         {/* HERO */}
-        <section className="pt-20 pb-16 text-center">
+        <section className="pt-10 pb-16 text-center">
           <h1 className="text-3xl sm:text-4xl lg:text-5xl font-semibold mb-4 tracking-tight">
             Glow. Heal. Feel Beautiful
           </h1>
@@ -47,18 +90,14 @@ export default function Home() {
             to help you feel confident, healthy, and beautiful every day.
           </p>
 
-          {/* 💖 VISIT STORE BUTTON */}
           <button
             onClick={() => navigate("/shop")}
             className="
-              px-10 py-3
-              rounded-full
+              px-10 py-3 rounded-full
               bg-gradient-to-r from-mauve to-lavender
               text-white text-sm font-medium
-              shadow-lg
-              hover:scale-[1.02]
-              hover:shadow-xl
-              transition
+              shadow-lg hover:scale-[1.02]
+              hover:shadow-xl transition
             "
           >
             Visit Store
@@ -73,7 +112,51 @@ export default function Home() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
             {products.map((p, i) => (
-              <ProductCard key={i} product={p} />
+              <div
+                key={i}
+                className="
+                  bg-peach/30
+                  rounded-3xl
+                  p-4
+                  shadow-md
+                  hover:shadow-xl
+                  transition
+                  hover:-translate-y-1
+                  cursor-pointer
+                "
+                onClick={() => navigate("/shop")}
+              >
+                {/* Image */}
+                <div className="overflow-hidden rounded-2xl mb-4">
+                  <img
+                    src={p.image}
+                    alt={p.name}
+                    className="w-full h-52 object-cover hover:scale-105 transition"
+                    loading="lazy"
+                  />
+                </div>
+
+                {/* Category */}
+                <span className="
+                  inline-block mb-2
+                  text-[11px]
+                  px-3 py-1 rounded-full
+                  bg-lavender/50
+                  font-medium
+                ">
+                  {p.category}
+                </span>
+
+                {/* Name */}
+                <h3 className="font-semibold mb-1">
+                  {p.name}
+                </h3>
+
+                {/* Description */}
+                <p className="text-sm opacity-70 leading-relaxed">
+                  {p.description}
+                </p>
+              </div>
             ))}
           </div>
         </section>

@@ -22,7 +22,7 @@ export default function Login() {
     if (error) {
       setError(error.message);
     } else {
-      navigate("/admin");
+      navigate("/admin/products"); // ✅ FIX
     }
 
     setLoading(false);
@@ -30,8 +30,6 @@ export default function Login() {
 
   return (
     <div className="min-h-screen bg-milk">
-      
-      {/* ⬅️ BACK — SAME POSITION & STYLE AS SHOP */}
       <div className="max-w-6xl mx-auto px-6 pt-8">
         <button
           onClick={() => navigate("/shop")}
@@ -41,7 +39,6 @@ export default function Login() {
         </button>
       </div>
 
-      {/* CENTERED LOGIN CARD */}
       <div className="flex items-center justify-center mt-24">
         <form
           onSubmit={handleLogin}

@@ -3,7 +3,6 @@ import {
   useSearchParams,
   useNavigate,
   Link,
-  useLocation,
 } from "react-router-dom";
 import { FaArrowLeft, FaShoppingBag } from "react-icons/fa";
 import ProductCard from "../components/ProductCard";
@@ -16,7 +15,6 @@ const CATEGORIES = ["Shirts", "Forever"];
 export default function Shop() {
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
-  const location = useLocation();
 
   const {
     items,
@@ -29,18 +27,15 @@ export default function Shop() {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // 🔔 toast visibility (driven ONLY by cartEventId)
   const [toastVisible, setToastVisible] = useState(false);
 
   const activeCategory =
     searchParams.get("category") || CATEGORIES[0];
 
-  const isAdminRoute = location.pathname.startsWith("/admin");
-
-  /* ================= FETCH ================= */
+  /* ================= FETCH PRODUCTS ================= */
   useEffect(() => {
     async function fetchProducts() {
-      console.log("📦 Fetching products");
+      setLoading(true);
 
       const { data, error } = await supabase
         .from("products")
@@ -49,15 +44,23 @@ export default function Shop() {
 
       if (error) {
         console.error("❌ Fetch error:", error);
+        setLoading(false);
         return;
       }
 
       const withImages = data.map((p) => {
+        if (!p.image) {
+          return { ...p, imageUrl: null };
+        }
+
         const { data: img } = supabase.storage
           .from("products")
           .getPublicUrl(p.image);
 
-        return { ...p, imageUrl: img.publicUrl };
+        return {
+          ...p,
+          imageUrl: img.publicUrl,
+        };
       });
 
       setProducts(withImages);
@@ -71,28 +74,23 @@ export default function Shop() {
   useEffect(() => {
     if (!cartEventId) return;
 
-    console.log("🔔 Toast fired:", cartEventId, cartMessage);
-
     setToastVisible(true);
     const t = setTimeout(() => setToastVisible(false), 1600);
     return () => clearTimeout(t);
   }, [cartEventId, cartMessage]);
 
-  /* ================= ADD ================= */
+  /* ================= ADD TO CART ================= */
   const handleAddToCart = (product) => {
-    console.log("🟢 Add clicked:", product.name);
-
     addItem({
       name: product.name,
-      price: product.price, // number is fine
-      image: product.imageUrl, // FULL URL (important)
+      price: product.price,
+      image: product.imageUrl,
     });
   };
 
   /* ================= UI ================= */
   return (
     <>
-      {/* 🔔 TOAST */}
       {toastVisible && (
         <div
           key={cartEventId}
@@ -104,7 +102,6 @@ export default function Shop() {
         </div>
       )}
 
-      {/* HEADER */}
       <section className="section section-pad flex items-center">
         <button
           onClick={() => navigate("/")}
@@ -116,9 +113,8 @@ export default function Shop() {
         <h1 className="text-xl font-semibold mx-auto">Store</h1>
 
         <div className="flex gap-3">
-          {/* ✅ ADMIN LINK RESTORED */}
           <Link
-            to="/admin"
+            to="/admin/products"
             className="px-4 py-2 rounded-full text-sm bg-peach/50 hover:bg-peach"
           >
             Admin
@@ -138,7 +134,6 @@ export default function Shop() {
         </div>
       </section>
 
-      {/* CATEGORY */}
       <section className="section flex gap-3 justify-center mb-10">
         {CATEGORIES.map((cat) => (
           <button
@@ -155,7 +150,6 @@ export default function Shop() {
         ))}
       </section>
 
-      {/* PRODUCTS */}
       {loading ? (
         <Loader />
       ) : (
