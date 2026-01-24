@@ -1,42 +1,41 @@
 import ProductRow from "./ProductRow";
+import Loader from "../../components/Loader";
 
 export default function ProductTable({
   products,
+  loading,
   onUpdate,
   onDelete,
 }) {
+  /* ================= LOADING ================= */
+  if (loading) {
+    return (
+      <div className="mt-10 flex justify-center py-20">
+        <Loader />
+      </div>
+    );
+  }
+
+  /* ================= EMPTY ================= */
   if (!products.length) {
     return (
-      <p className="text-center opacity-60 py-10">
+      <p className="text-center opacity-60 py-16">
         No products yet.
       </p>
     );
   }
 
+  /* ================= LIST ================= */
   return (
-    <div className="overflow-x-auto bg-white rounded-xl shadow">
-      <table className="w-full text-sm">
-        <thead className="bg-gray-50 border-b">
-          <tr>
-            <th className="p-3 text-left">Image</th>
-            <th className="p-3 text-left">Name</th>
-            <th className="p-3 text-left">Category</th>
-            <th className="p-3 text-left">Price</th>
-            <th className="p-3 text-left">Actions</th>
-          </tr>
-        </thead>
-
-        <tbody>
-          {products.map((product) => (
-            <ProductRow
-              key={product.id}
-              product={product}
-              onUpdate={onUpdate}
-              onDelete={onDelete}
-            />
-          ))}
-        </tbody>
-      </table>
+    <div className="mt-10 space-y-4">
+      {products.map((product) => (
+        <ProductRow
+          key={product.id}
+          product={product}
+          onUpdate={onUpdate}
+          onDelete={onDelete}
+        />
+      ))}
     </div>
   );
 }

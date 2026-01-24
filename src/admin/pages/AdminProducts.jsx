@@ -1,5 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../../lib/supabase";
+
+import BackButton from "../../components/BackButton";
 import ProductForm from "../components/ProductForm";
 import ProductTable from "../components/ProductTable";
 import { useAdminProducts } from "../hooks/useAdminProducts";
@@ -25,13 +27,8 @@ export default function AdminProducts() {
     <div className="p-6 max-w-6xl mx-auto">
       {/* TOP BAR */}
       <div className="flex items-center justify-between mb-6">
-        {/* ✅ FIXED BACK */}
-        <button
-          onClick={() => navigate("/shop")}
-          className="text-sm underline text-gray-600 hover:text-gray-900"
-        >
-          ← Back to Store
-        </button>
+        {/* CONSISTENT BACK */}
+        <BackButton to="/shop" />
 
         <button
           onClick={handleLogout}
@@ -46,9 +43,10 @@ export default function AdminProducts() {
 
       {loading && <Loader />}
 
-      {/* PRODUCTS TABLE */}
+      {/* PRODUCTS */}
       <ProductTable
         products={products}
+        loading={loading}
         onDelete={deleteProduct}
         onUpdate={updateProduct}
       />

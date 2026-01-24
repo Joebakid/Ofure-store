@@ -1,11 +1,9 @@
 import { useEffect, useState } from "react";
-import {
-  useSearchParams,
-  useNavigate,
-  Link,
-} from "react-router-dom";
-import { FaArrowLeft, FaShoppingBag } from "react-icons/fa";
+import { useSearchParams, Link } from "react-router-dom";
+import { FaShoppingBag } from "react-icons/fa";
+
 import ProductCard from "../components/ProductCard";
+import BackButton from "../components/BackButton";
 import { useCart } from "../context/CartContext";
 import { supabase } from "../lib/supabase";
 import Loader from "../components/Loader";
@@ -14,7 +12,6 @@ const CATEGORIES = ["Shirts", "Forever"];
 
 export default function Shop() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const navigate = useNavigate();
 
   const {
     items,
@@ -26,7 +23,6 @@ export default function Shop() {
 
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
-
   const [toastVisible, setToastVisible] = useState(false);
 
   const activeCategory =
@@ -49,18 +45,13 @@ export default function Shop() {
       }
 
       const withImages = data.map((p) => {
-        if (!p.image) {
-          return { ...p, imageUrl: null };
-        }
+        if (!p.image) return { ...p, imageUrl: null };
 
         const { data: img } = supabase.storage
           .from("products")
           .getPublicUrl(p.image);
 
-        return {
-          ...p,
-          imageUrl: img.publicUrl,
-        };
+        return { ...p, imageUrl: img.publicUrl };
       });
 
       setProducts(withImages);
@@ -80,35 +71,26 @@ export default function Shop() {
   }, [cartEventId, cartMessage]);
 
   /* ================= ADD TO CART ================= */
-  const handleAddToCart = (product) => {
+  function handleAddToCart(product) {
     addItem({
       name: product.name,
       price: product.price,
       image: product.imageUrl,
     });
-  };
+  }
 
-  /* ================= UI ================= */
   return (
     <>
+      {/* TOAST */}
       {toastVisible && (
-        <div
-          key={cartEventId}
-          className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50
-                     bg-mauve text-white px-5 py-2
-                     rounded-full shadow-lg text-sm"
-        >
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-mauve text-white px-5 py-2 rounded-full shadow-lg text-sm">
           {cartMessage}
         </div>
       )}
 
+      {/* HEADER */}
       <section className="section section-pad flex items-center">
-        <button
-          onClick={() => navigate("/")}
-          className="flex items-center gap-2 text-sm"
-        >
-          <FaArrowLeft /> Back
-        </button>
+        <BackButton to="/" />
 
         <h1 className="text-xl font-semibold mx-auto">Store</h1>
 
@@ -134,6 +116,7 @@ export default function Shop() {
         </div>
       </section>
 
+      {/* CATEGORY FILTER */}
       <section className="section flex gap-3 justify-center mb-10">
         {CATEGORIES.map((cat) => (
           <button
@@ -150,6 +133,7 @@ export default function Shop() {
         ))}
       </section>
 
+      {/* PRODUCTS */}
       {loading ? (
         <Loader />
       ) : (
@@ -159,10 +143,7 @@ export default function Shop() {
             .map((product) => (
               <ProductCard
                 key={product.id}
-                product={{
-                  ...product,
-                  image: product.imageUrl,
-                }}
+                product={{ ...product, image: product.imageUrl }}
                 onAdd={() => handleAddToCart(product)}
               />
             ))}
