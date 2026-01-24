@@ -1,51 +1,50 @@
 import Button from "./Button";
-import { FaWhatsapp } from "react-icons/fa";
-import { getWhatsAppLink } from "../../lib/whatsapp";
+import { FaShoppingBag, FaRegHeart } from "react-icons/fa";
+import { useNavigate } from "react-router-dom";
 
 export default function Navbar() {
-  const handleWhatsAppClick = () => {
-    const link = getWhatsAppLink({
-      name: "General Inquiry",
-      price: "-",
-      category: "Inquiry",
-    });
-
-    window.open(link, "_blank");
-  };
+  const navigate = useNavigate();
 
   return (
-    <header className="fixed top-3 sm:top-4 left-0 w-full z-50">
+    <header className="fixed top-4 left-0 w-full z-50 pointer-events-none">
       <nav
         className="
-          section
+          pointer-events-auto
+          mx-auto
+          w-[30%] max-w-sm min-w-[220px]
           flex items-center justify-between
-          bg-milk/80 backdrop-blur-xl
-          py-3 px-4 sm:px-6
-          rounded-[32px]
-          shadow-lg
+          bg-milk/70 backdrop-blur-2xl
+          px-4 py-2
+          rounded-full
+          shadow-[0_8px_30px_rgba(0,0,0,0.06)]
         "
       >
-        {/* Brand */}
-        <div className="text-base sm:text-lg font-semibold">
-          Ofure<span className="text-mauve">Shop</span>
-        </div>
+        {/* Logo Icon */}
+        <button
+          onClick={() => navigate("/")}
+          className="
+            w-9 h-9
+            flex items-center justify-center
+            rounded-full
+            bg-white/60
+            text-mauve
+            hover:scale-105 transition
+          "
+        >
+          <FaRegHeart size={14} />
+        </button>
 
-        {/* Links */}
-        <div className="hidden md:flex gap-6 text-sm">
-          <a className="hover:text-mauve transition" href="#">
-            Home
-          </a>
-          <a className="hover:text-mauve transition" href="#">
-            Forever
-          </a>
-          <a className="hover:text-mauve transition" href="#">
-            Shirts
-          </a>
-        </div>
-
-        {/* WhatsApp CTA */}
-        <Button icon={FaWhatsapp} onClick={handleWhatsAppClick}>
-          WhatsApp
+        {/* Cart */}
+        <Button
+          icon={FaShoppingBag}
+          onClick={() => navigate("/cart")}
+          className="
+            !px-3 !py-2
+            text-xs
+            rounded-full
+          "
+        >
+          Cart
         </Button>
       </nav>
     </header>

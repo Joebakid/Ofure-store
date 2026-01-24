@@ -1,43 +1,34 @@
-import Button from "./Button";
-import ImageWithLoader from "./ImageWithLoader";
-import { useNavigate } from "react-router-dom";
-
-export default function ProductCard({ product }) {
-  const navigate = useNavigate();
+export default function ProductCard({ product, onAdd }) {
+  console.log("🧱 ProductCard rendered:", product.name);
 
   return (
-    <div
-      className="
-        bg-peach/40
-        rounded-[32px]
-        p-4 sm:p-5
-        shadow-xl
-        hover:-translate-y-2
-        transition-all duration-300
-      "
-    >
-      <div className="mb-4 h-48 sm:h-56">
-        <ImageWithLoader
+    <div className="bg-peach/40 rounded-3xl p-4 shadow-lg flex flex-col relative">
+      <div className="w-full h-48 rounded-2xl overflow-hidden mb-4">
+        <img
           src={product.image}
           alt={product.name}
+          className="w-full h-full object-cover"
         />
       </div>
 
-      <h3 className="text-base sm:text-lg font-semibold mb-1">
-        {product.name}
-      </h3>
+      <h3 className="font-semibold mb-1">{product.name}</h3>
 
-      <p className="text-sm opacity-80 mb-2">
-        {product.description}
+      <p className="font-semibold mb-4">
+        ₦{Number(product.price).toLocaleString()}
       </p>
 
-      <p className="font-semibold mb-3">
-        ₦{product.price}
-      </p>
-
-      <Button onClick={() => navigate("/shop")}>
-        View in Store
-      </Button>
+      {/* 🔴 THIS IS THE CRITICAL BUTTON */}
+      <button
+        type="button"
+        onClick={() => {
+          console.log("🟢 ADD CLICK:", product.name);
+          if (onAdd) onAdd();
+          else console.warn("⚠️ onAdd not provided");
+        }}
+        className="mt-auto w-full py-2.5 rounded-full bg-mauve text-white active:scale-95 transition"
+      >
+        Add to Cart
+      </button>
     </div>
   );
 }
