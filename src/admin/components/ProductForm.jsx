@@ -1,6 +1,5 @@
 import { useState } from "react";
-
-const CATEGORIES = ["Shirts", "Forever"];
+import { CATEGORIES } from "../utils/categories";
 
 export default function ProductForm({ onCreate, loading }) {
   const [name, setName] = useState("");
@@ -12,8 +11,6 @@ export default function ProductForm({ onCreate, loading }) {
   const handleSubmit = (e) => {
     e.preventDefault();
 
-    console.log("📝 form submit");
-
     onCreate({
       name,
       price: Number(price),
@@ -24,11 +21,7 @@ export default function ProductForm({ onCreate, loading }) {
   };
 
   return (
- 
- <form
-      onSubmit={handleSubmit}
-      className="bg-white  p-6 rounded-2xl shadow mb-10 max-w-md mx-auto"
-    >
+    <form className="bg-white p-6 rounded-2xl shadow mb-10 max-w-md mx-auto" onSubmit={handleSubmit}>
       <h2 className="text-lg font-semibold mb-4 text-center">
         Add Product
       </h2>
@@ -56,7 +49,9 @@ export default function ProductForm({ onCreate, loading }) {
         onChange={(e) => setCategory(e.target.value)}
       >
         {CATEGORIES.map((c) => (
-          <option key={c}>{c}</option>
+          <option key={c} value={c}>
+            {c}
+          </option>
         ))}
       </select>
 
@@ -71,10 +66,7 @@ export default function ProductForm({ onCreate, loading }) {
         type="file"
         className="mb-4"
         accept="image/*"
-        onChange={(e) => {
-          console.log("📁 file selected:", e.target.files[0]);
-          setImageFile(e.target.files[0]);
-        }}
+        onChange={(e) => setImageFile(e.target.files[0])}
       />
 
       <button
@@ -84,7 +76,5 @@ export default function ProductForm({ onCreate, loading }) {
         {loading ? "Adding…" : "Add Product"}
       </button>
     </form>
-   
-   
   );
 }

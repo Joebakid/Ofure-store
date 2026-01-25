@@ -9,19 +9,21 @@ import { supabase } from "../lib/supabase";
 import Loader from "../components/Loader";
 import Pagination from "../components/Pagination";
 
-const CATEGORIES = ["Shirts", "Forever"];
-const ITEMS_PER_PAGE = 6;
+/* ================= CATEGORIES ================= */
+const CATEGORIES = [
+  "Shirts",
+  "Forever Living Products",
+  "Massey Cosmetics",
+];
+
+/* Grid-friendly page size */
+const ITEMS_PER_PAGE = 8;
 
 export default function Shop() {
   const [searchParams, setSearchParams] = useSearchParams();
 
-  const {
-    items,
-    addItem,
-    setOpen,
-    cartEventId,
-    cartMessage,
-  } = useCart();
+  const { items, addItem, setOpen, cartEventId, cartMessage } =
+    useCart();
 
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -51,11 +53,9 @@ export default function Shop() {
 
       const withImages = data.map((p) => {
         if (!p.image) return { ...p, imageUrl: null };
-
         const { data: img } = supabase.storage
           .from("products")
           .getPublicUrl(p.image);
-
         return { ...p, imageUrl: img.publicUrl };
       });
 
@@ -69,7 +69,6 @@ export default function Shop() {
   /* ================= TOAST ================= */
   useEffect(() => {
     if (!cartEventId) return;
-
     setToastVisible(true);
     const t = setTimeout(() => setToastVisible(false), 1600);
     return () => clearTimeout(t);
@@ -107,7 +106,7 @@ export default function Shop() {
   }
 
   return (
-    <>
+    <div className="min-h-screen flex flex-col">
       {/* TOAST */}
       {toastVisible && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-mauve text-white px-5 py-2 rounded-full shadow-lg text-sm">
@@ -130,20 +129,16 @@ export default function Shop() {
               alt={previewProduct.name}
               className="w-full h-72 object-contain rounded-2xl"
             />
-
             <div className="mt-4 space-y-2">
               <h2 className="font-semibold">
                 {previewProduct.name}
               </h2>
-
               <p className="text-sm text-gray-600">
                 {previewProduct.description}
               </p>
-
               <p className="font-medium text-mauve">
                 ₦{Number(previewProduct.price).toLocaleString()}
               </p>
-
               <button
                 onClick={() => {
                   handleAddToCart(previewProduct);
@@ -186,7 +181,7 @@ export default function Shop() {
       </section>
 
       {/* CATEGORY */}
-      <section className="section flex gap-3 justify-center mb-8">
+      <section className="section flex gap-3 justify-center mb-8 flex-wrap">
         {CATEGORIES.map((cat) => (
           <button
             key={cat}
@@ -202,11 +197,11 @@ export default function Shop() {
         ))}
       </section>
 
-      {/* PRODUCTS */}
-      {loading ? (
-        <Loader />
-      ) : (
-        <>
+      {/* MAIN CONTENT (GROWS) */}
+      <div className="flex-1">
+        {loading ? (
+          <Loader />
+        ) : (
           <section className="section grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-5">
             {paginatedProducts.map((product) => (
               <ProductCard
@@ -217,16 +212,16 @@ export default function Shop() {
               />
             ))}
           </section>
+        )}
+      </div>
 
-          {/* Pagination ALWAYS visible */}
-          <Pagination
-            currentPage={currentPage}
-            totalPages={totalPages}
-            onPageChange={handlePageChange}
-            className="mt-6 sm:mt-10 pb-20"
-          />
-        </>
-      )}
-    </>
+      {/* PAGINATION — ALWAYS AT BOTTOM */}
+      <Pagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        onPageChange={handlePageChange}
+        className="pb-20"
+      />
+    </div>
   );
 }

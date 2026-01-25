@@ -8,21 +8,21 @@ const products = [
     category: "Forever Living",
     description: "Supports digestion & immunity",
     image:
-      "https://images.unsplash.com/photo-1619451334792-150fd785ee74?w=500&auto=format&fit=crop&q=60",
+      "https://usoxbpkkyqkrpzxdwivq.supabase.co/storage/v1/object/public/products/362aeefd-39a6-488e-85d1-8cb8b49b6f6b.jpeg",
   },
   {
     name: "Pink Crop Shirt",
     category: "Shirts",
     description: "Soft, comfy & stylish",
     image:
-      "https://images.unsplash.com/photo-1766465524306-b6c9c27d1b69?w=500&auto=format&fit=crop&q=60",
+      "https://usoxbpkkyqkrpzxdwivq.supabase.co/storage/v1/object/public/products/64e35c7f-fa24-45e9-b9e2-ea7bfdd59bf6.jpeg",
   },
   {
     name: "Forever Bright Toothgel",
     category: "Forever Living",
     description: "Gentle whitening & fresh breath care",
     image:
-      "https://images.unsplash.com/photo-1588776814546-1ffcf47267a5?w=500&auto=format&fit=crop&q=60",
+      "https://usoxbpkkyqkrpzxdwivq.supabase.co/storage/v1/object/public/products/a1b8ff60-76a2-4581-acc9-68c7c8af1af8.png",
   },
 ];
 
