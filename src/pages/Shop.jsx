@@ -16,7 +16,6 @@ const CATEGORIES = [
   "Massey Cosmetics",
 ];
 
-/* Grid-friendly page size */
 const ITEMS_PER_PAGE = 8;
 
 export default function Shop() {
@@ -33,7 +32,8 @@ export default function Shop() {
   /* ================= PARAMS ================= */
   const activeCategory =
     searchParams.get("category") || CATEGORIES[0];
-  const currentPage = Number(searchParams.get("page")) || 1;
+
+  const rawPage = Number(searchParams.get("page")) || 1;
 
   /* ================= FETCH PRODUCTS ================= */
   useEffect(() => {
@@ -74,22 +74,21 @@ export default function Shop() {
     return () => clearTimeout(t);
   }, [cartEventId, cartMessage]);
 
-  function handleAddToCart(product) {
-    addItem({
-      name: product.name,
-      price: product.price,
-      image: product.imageUrl,
-    });
-  }
-
-  /* ================= FILTER + PAGINATION ================= */
+  /* ================= FILTER ================= */
   const filteredProducts = useMemo(
     () => products.filter((p) => p.category === activeCategory),
     [products, activeCategory]
   );
 
-  const totalPages = Math.ceil(
-    filteredProducts.length / ITEMS_PER_PAGE
+  const totalPages = Math.max(
+    1,
+    Math.ceil(filteredProducts.length / ITEMS_PER_PAGE)
+  );
+
+  /* 🔒 Clamp page safely */
+  const currentPage = Math.min(
+    Math.max(rawPage, 1),
+    totalPages
   );
 
   const paginatedProducts = filteredProducts.slice(
@@ -97,21 +96,39 @@ export default function Shop() {
     currentPage * ITEMS_PER_PAGE
   );
 
-  function scrollToTop() {
+  /* ================= SCROLL (FIXED) ================= */
+  useEffect(() => {
     window.scrollTo({
       top: 0,
       behavior: "smooth",
     });
-  }
+  }, [currentPage, activeCategory]);
 
+  /* ================= HANDLERS ================= */
   function handlePageChange(page) {
-    setSearchParams({ category: activeCategory, page });
-    scrollToTop();
+    if (page === currentPage) return;
+
+    setSearchParams({
+      category: activeCategory,
+      page,
+    });
   }
 
   function handleCategoryChange(cat) {
-    setSearchParams({ category: cat, page: 1 });
-    scrollToTop();
+    if (cat === activeCategory) return;
+
+    setSearchParams({
+      category: cat,
+      page: 1,
+    });
+  }
+
+  function handleAddToCart(product) {
+    addItem({
+      name: product.name,
+      price: product.price,
+      image: product.imageUrl,
+    });
   }
 
   return (
@@ -206,7 +223,7 @@ export default function Shop() {
         ))}
       </section>
 
-      {/* MAIN CONTENT */}
+      {/* CONTENT */}
       <div className="flex-1">
         {loading ? (
           <Loader />
