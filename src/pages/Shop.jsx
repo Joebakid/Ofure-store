@@ -97,12 +97,21 @@ export default function Shop() {
     currentPage * ITEMS_PER_PAGE
   );
 
+  function scrollToTop() {
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth",
+    });
+  }
+
   function handlePageChange(page) {
     setSearchParams({ category: activeCategory, page });
+    scrollToTop();
   }
 
   function handleCategoryChange(cat) {
     setSearchParams({ category: cat, page: 1 });
+    scrollToTop();
   }
 
   return (
@@ -197,7 +206,7 @@ export default function Shop() {
         ))}
       </section>
 
-      {/* MAIN CONTENT (GROWS) */}
+      {/* MAIN CONTENT */}
       <div className="flex-1">
         {loading ? (
           <Loader />
@@ -215,7 +224,7 @@ export default function Shop() {
         )}
       </div>
 
-      {/* PAGINATION — ALWAYS AT BOTTOM */}
+      {/* PAGINATION */}
       <Pagination
         currentPage={currentPage}
         totalPages={totalPages}
