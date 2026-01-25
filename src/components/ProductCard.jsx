@@ -2,7 +2,7 @@ export default function ProductCard({ product, onAdd, onPreview }) {
   console.log("🧱 ProductCard rendered:", product.name);
 
   return (
-    <div className="bg-peach/40 rounded-3xl p-3 shadow-md flex flex-col relative hover:shadow-lg transition">
+    <div className="bg-peach/40 rounded-3xl my-3 p-3 shadow-md flex flex-col relative hover:shadow-lg transition">
       {/* IMAGE */}
       <button
         type="button"
