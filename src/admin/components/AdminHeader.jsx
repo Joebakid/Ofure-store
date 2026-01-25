@@ -1,6 +1,7 @@
 export default function AdminHeader({ onLogout }) {
   return (
-    <div className="flex items-center justify-between mb-6">
+    <div className=" py-20">
+    <div className="flex items-center justify-between ">
       <h1 className="text-xl font-semibold text-mauve">Admin Products</h1>
 
       <button
@@ -10,5 +11,8 @@ export default function AdminHeader({ onLogout }) {
         Logout
       </button>
     </div>
+    </div>
   );
 }
+
+  

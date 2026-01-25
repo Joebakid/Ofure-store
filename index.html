@@ -1,29 +1,116 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
   <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta charset="utf-8" />
 
-    <title>OFURE STORE</title>
+    <!-- Favicon -->
+    <link rel="icon" href="/favicon.svg" />
 
-    <!-- ✅ Meta Description -->
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#F7C1D9" />
+
+    <!-- SEO -->
+    <title>
+      LiveOutLoud | Wellness Essentials & Stylish Fashion for Women
+    </title>
+
     <meta
       name="description"
-      content="Ofure Store is your destination for premium fashion, wellness essentials, and everyday lifestyle products. Shop quality items with fast delivery and secure checkout."
+      content="LiveOutLoud is your go-to store for wellness essentials and stylish fashion. Shop Forever Living products, trendy shirts, and lifestyle items to glow, heal, and feel beautiful every day."
     />
 
-    <!-- ✅ Open Graph (for link sharing) -->
-    <meta property="og:title" content="OFURE STORE" />
+    <meta
+      name="keywords"
+      content="LiveOutLoud, wellness store, Forever Living Nigeria, women fashion, girly clothing, shirts for women, skincare Nigeria, healthy lifestyle, beauty store online"
+    />
+
+    <meta name="author" content="LiveOutLoud" />
+
+    <!-- PWA -->
+    <link rel="manifest" href="/manifest.json" />
+
+    <!-- Canonical -->
+    <link rel="canonical" href="https://liveoutloud.vercel.app/" />
+
+    <!-- Open Graph (WhatsApp / Facebook Preview) -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="LiveOutLoud" />
+    <meta
+      property="og:title"
+      content="LiveOutLoud | Glow. Heal. Feel Beautiful"
+    />
     <meta
       property="og:description"
-      content="Premium fashion, wellness essentials, and lifestyle products. Shop quality items with fast delivery and secure checkout."
+      content="Shop wellness essentials, Forever Living products, and stylish fashion at LiveOutLoud. Carefully selected to help you glow, heal, and feel confident every day."
     />
-    <meta property="og:type" content="website" />
     <meta property="og:url" content="https://liveoutloud.vercel.app/" />
 
+    <!-- 🔥 Replace this with your uploaded logo image -->
+    <meta
+      property="og:image"
+      content="https://liveoutloud.vercel.app/logo512.png"
+    />
+    <meta
+      property="og:image:secure_url"
+      content="https://liveoutloud.vercel.app/logo512.png"
+    />
+    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:width" content="512" />
+    <meta property="og:image:height" content="512" />
+    <meta
+      property="og:image:alt"
+      content="LiveOutLoud beauty and wellness logo"
+    />
+    <meta property="og:locale" content="en_US" />
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta
+      name="twitter:title"
+      content="LiveOutLoud | Glow. Heal. Feel Beautiful"
+    />
+    <meta
+      name="twitter:description"
+      content="Discover wellness essentials, Forever Living products and stylish fashion for women at LiveOutLoud."
+    />
+    <meta
+      name="twitter:image"
+      content="https://liveoutloud.vercel.app/logo512.png"
+    />
   </head>
+
   <body>
+    <noscript>
+      You need to enable JavaScript to run this app.
+    </noscript>
+
     <div id="root"></div>
+
+    <!-- Vite Entry -->
     <script type="module" src="/src/main.jsx"></script>
+
+    <!-- Vercel Analytics -->
+    <script>
+      (function () {
+        var host = window.location.hostname;
+        var isLocal =
+          host === "localhost" ||
+          host === "127.0.0.1" ||
+          host === "[::1]";
+
+        if (isLocal) return;
+
+        window.va =
+          window.va ||
+          function () {
+            (window.vaq = window.vaq || []).push(arguments);
+          };
+
+        var s = document.createElement("script");
+        s.defer = true;
+        s.src = "/_vercel/insights/script.js";
+        document.head.appendChild(s);
+      })();
+    </script>
   </body>
 </html>

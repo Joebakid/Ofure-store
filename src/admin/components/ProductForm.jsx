@@ -24,9 +24,10 @@ export default function ProductForm({ onCreate, loading }) {
   };
 
   return (
-    <form
+ 
+ <form
       onSubmit={handleSubmit}
-      className="bg-white p-6 rounded-2xl shadow mb-10 max-w-md mx-auto"
+      className="bg-white  p-6 rounded-2xl shadow mb-10 max-w-md mx-auto"
     >
       <h2 className="text-lg font-semibold mb-4 text-center">
         Add Product
@@ -83,5 +84,7 @@ export default function ProductForm({ onCreate, loading }) {
         {loading ? "Adding…" : "Add Product"}
       </button>
     </form>
+   
+   
   );
 }

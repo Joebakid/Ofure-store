@@ -18,8 +18,8 @@ export default function Footer({
           
           {/* Brand */}
           <div className="flex items-center gap-2">
-            <span className="font-semibold font-orbitron lowercase text-white">
-              ofure
+            <span className="font-semibold font-orbitron  text-white">
+              LiveOutLoud
             </span>
             <span className="font-semibold font-orbitron lowercase">
               © {new Date().getFullYear()}

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { supabase } from "../lib/supabase";
 import { useNavigate } from "react-router-dom";
+import BackButton from "../components/BackButton";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -29,14 +30,9 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-milk">
+    <div className="app-container bg-milk">
       <div className="max-w-6xl mx-auto px-6 pt-8">
-        <button
-          onClick={() => navigate("/shop")}
-          className="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900"
-        >
-          ← Back
-        </button>
+          <BackButton to="/shop" />
       </div>
 
       <div className="flex items-center justify-center mt-24">

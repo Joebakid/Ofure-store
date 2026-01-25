@@ -49,6 +49,39 @@ body {
     lg:px-10;
 }
 
+
+
+@layer utilities {
+  .app-container {
+    @apply
+      w-full
+      mx-auto
+
+      /* 📱 Mobile */
+      px-4 py-16
+
+      /* 📲 Small screens */
+      sm:px-6
+
+      /* 💻 Tablets */
+      md:px-8
+
+      /* 🖥️ Laptops */
+      lg:px-12
+
+      /* 🖥️ Large desktops */
+      xl:px-16
+
+      /* 🖥️ Very large screens */
+      2xl:px-24
+
+      /* Max width scaling */
+      max-w-screen-xl
+      2xl:max-w-screen-2xl;
+  }
+}
+
+
 /* Optional helpers */
 .section-pad {
   @apply py-12 sm:py-16 lg:py-20;

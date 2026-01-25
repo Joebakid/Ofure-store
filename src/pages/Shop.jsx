@@ -89,7 +89,7 @@ export default function Shop() {
       )}
 
       {/* HEADER */}
-      <section className="section section-pad flex items-center">
+      <section className="app-container section-pad flex items-center">
         <BackButton to="/" />
 
         <h1 className="text-xl font-semibold mx-auto">Store</h1>
