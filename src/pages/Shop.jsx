@@ -2,12 +2,12 @@ import { useEffect, useState, useMemo } from "react";
 import { useSearchParams, Link } from "react-router-dom";
 import { FaShoppingBag } from "react-icons/fa";
 
-import ProductCard from "../components/ProductCard";
 import BackButton from "../components/BackButton";
-import { useCart } from "../context/CartContext";
-import { supabase } from "../lib/supabase";
 import Loader from "../components/Loader";
 import Pagination from "../components/Pagination";
+import ProductCard from "../components/ProductCard";
+import { useCart } from "../context/CartContext";
+import { supabase } from "../lib/supabase";
 
 /* ================= CATEGORIES ================= */
 const CATEGORIES = [
@@ -19,8 +19,8 @@ const ITEMS_PER_PAGE = 8;
 
 export default function Shop() {
   const [searchParams, setSearchParams] = useSearchParams();
-
-  const { items, addItem, setOpen, cartEventId, cartMessage } = useCart();
+  const { items, addItem, setOpen, cartEventId, cartMessage } =
+    useCart();
 
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -33,7 +33,7 @@ export default function Shop() {
 
   const rawPage = Number(searchParams.get("page")) || 1;
 
-  /* ================= FETCH PRODUCTS ================= */
+  /* ================= FETCH ================= */
   useEffect(() => {
     async function fetchProducts() {
       setLoading(true);
@@ -43,17 +43,17 @@ export default function Shop() {
         .select("*");
 
       if (error) {
-        console.error("❌ Fetch error:", error);
+        console.error(error);
         setLoading(false);
         return;
       }
 
       const withImages = data.map((p) => {
-        if (!p.image) return { ...p, imageUrl: null };
         const { data: img } = supabase.storage
           .from("products")
           .getPublicUrl(p.image);
-        return { ...p, imageUrl: img.publicUrl };
+
+        return { ...p, imageUrl: img?.publicUrl };
       });
 
       setProducts(withImages);
@@ -66,6 +66,7 @@ export default function Shop() {
   /* ================= TOAST ================= */
   useEffect(() => {
     if (!cartEventId) return;
+
     setToastVisible(true);
     const t = setTimeout(() => setToastVisible(false), 1600);
     return () => clearTimeout(t);
@@ -76,7 +77,9 @@ export default function Shop() {
     return products
       .filter((p) => p.category === activeCategory)
       .sort((a, b) =>
-        a.name.localeCompare(b.name, undefined, { sensitivity: "base" })
+        a.name.localeCompare(b.name, undefined, {
+          sensitivity: "base",
+        })
       );
   }, [products, activeCategory]);
 
@@ -85,7 +88,6 @@ export default function Shop() {
     Math.ceil(filteredProducts.length / ITEMS_PER_PAGE)
   );
 
-  /* 🔒 Clamp page safely */
   const currentPage = Math.min(
     Math.max(rawPage, 1),
     totalPages
@@ -96,11 +98,10 @@ export default function Shop() {
     currentPage * ITEMS_PER_PAGE
   );
 
-  /* ================= SCROLL ================= */
+  /* ================= SCROLL (GLITCH FIX) ================= */
   useEffect(() => {
-    window.scrollTo({
-      top: 0,
-      behavior: "smooth",
+    requestAnimationFrame(() => {
+      window.scrollTo({ top: 0, behavior: "smooth" });
     });
   }, [currentPage, activeCategory]);
 
@@ -140,45 +141,6 @@ export default function Shop() {
         </div>
       )}
 
-      {/* IMAGE MODAL */}
-      {previewProduct && (
-        <div
-          onClick={() => setPreviewProduct(null)}
-          className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4"
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            className="bg-white rounded-3xl max-w-md w-full p-4"
-          >
-            <img
-              src={previewProduct.imageUrl}
-              alt={previewProduct.name}
-              className="w-full h-72 object-contain rounded-2xl"
-            />
-            <div className="mt-4 space-y-2">
-              <h2 className="font-semibold">
-                {previewProduct.name}
-              </h2>
-              <p className="text-sm text-gray-600">
-                {previewProduct.description}
-              </p>
-              <p className="font-medium text-mauve">
-                ₦{Number(previewProduct.price).toLocaleString()}
-              </p>
-              <button
-                onClick={() => {
-                  handleAddToCart(previewProduct);
-                  setPreviewProduct(null);
-                }}
-                className="mt-2 w-full py-2 rounded-full bg-mauve text-white"
-              >
-                Add to cart
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* HEADER */}
       <section className="app-container section-pad flex items-center">
         <BackButton to="/" />
@@ -207,7 +169,7 @@ export default function Shop() {
       </section>
 
       {/* CATEGORY */}
-      <section className="section flex gap-3 justify-center mb-8 flex-wrap">
+      <section className="section flex gap-3 justify-center mb-8">
         {CATEGORIES.map((cat) => (
           <button
             key={cat}
@@ -223,7 +185,7 @@ export default function Shop() {
         ))}
       </section>
 
-      {/* CONTENT */}
+      {/* PRODUCTS */}
       <div className="flex-1">
         {loading ? (
           <Loader />

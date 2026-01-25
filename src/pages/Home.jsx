@@ -1,77 +1,121 @@
+import { useLayoutEffect, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { BsStars } from "react-icons/bs";
 import { HiHeart } from "react-icons/hi";
-
-const products = [
-  {
-    name: "Forever Aloe Vera Gel",
-    category: "Forever Living",
-    description: "Supports digestion & immunity",
-    image:
-      "https://usoxbpkkyqkrpzxdwivq.supabase.co/storage/v1/object/public/products/362aeefd-39a6-488e-85d1-8cb8b49b6f6b.jpeg",
-  },
-  {
-    name: "Pink Crop Shirt",
-    category: "Shirts",
-    description: "Soft, comfy & stylish",
-    image:
-      "https://usoxbpkkyqkrpzxdwivq.supabase.co/storage/v1/object/public/products/64e35c7f-fa24-45e9-b9e2-ea7bfdd59bf6.jpeg",
-  },
-  {
-    name: "Forever Bright Toothgel",
-    category: "Forever Living",
-    description: "Gentle whitening & fresh breath care",
-    image:
-      "https://usoxbpkkyqkrpzxdwivq.supabase.co/storage/v1/object/public/products/a1b8ff60-76a2-4581-acc9-68c7c8af1af8.png",
-  },
-];
+import gsap from "gsap";
+import { supabase } from "../lib/supabase";
+import Loader from "../components/Loader";
 
 export default function Home() {
   const navigate = useNavigate();
+  const root = useRef(null);
+
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [ready, setReady] = useState(false); // 👈 gate render
+
+  /* ================= FETCH LATEST PRODUCTS ================= */
+  useEffect(() => {
+    async function fetchLatestProducts() {
+      const { data, error } = await supabase
+        .from("products")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(3);
+
+      if (error) {
+        console.error("❌ Home fetch error:", error);
+        setProducts([]);
+        setLoading(false);
+        return;
+      }
+
+      const withImages = data.map((p) => {
+        if (!p.image) return { ...p, imageUrl: null };
+
+        const { data: img } = supabase.storage
+          .from("products")
+          .getPublicUrl(p.image);
+
+        return { ...p, imageUrl: img.publicUrl };
+      });
+
+      setProducts(withImages);
+      setLoading(false);
+
+      // 🕒 small delay to avoid paint race
+      setTimeout(() => setReady(true), 300);
+    }
+
+    fetchLatestProducts();
+  }, []);
+
+  /* ================= GSAP ================= */
+  useLayoutEffect(() => {
+    if (!ready || !root.current) return;
+
+    const ctx = gsap.context(() => {
+      const tl = gsap.timeline();
+
+      tl.from(".logo", {
+        y: -30,
+        opacity: 0,
+        duration: 0.6,
+        ease: "power3.out",
+      })
+        .from(
+          ".hero > *",
+          {
+            y: 30,
+            opacity: 0,
+            stagger: 0.15,
+            duration: 0.6,
+            ease: "power3.out",
+          },
+          "-=0.2"
+        )
+        .from(
+          ".card",
+          {
+            y: 40,
+            opacity: 0,
+            stagger: 0.15,
+            duration: 0.6,
+            ease: "power3.out",
+          },
+          "-=0.2"
+        );
+    }, root);
+
+    return () => ctx.revert();
+  }, [ready]);
+
+  /* ================= LOADER GATE ================= */
+  if (!ready) {
+    return <Loader />; // 👈 NOTHING renders before this
+  }
 
   return (
-    <div className="flex justify-center">
-      <div className="w-full max-w-6xl px-6">
+    <main ref={root} className="w-full bg-milk">
+      <div className="max-w-6xl mx-auto px-6">
 
-        {/* 🌈 LOGO HEADER */}
-        <div className="pt-10 pb-6 flex justify-center">
+        {/* LOGO */}
+        <div className="logo pt-10 flex justify-center">
           <button
             onClick={() => navigate("/")}
-            className="
-              group flex items-center gap-3
-              px-6 py-3 rounded-full
-              bg-white/70 backdrop-blur
-              shadow-md hover:shadow-xl
-              transition hover:scale-[1.03]
-            "
+            className="flex items-center gap-3 px-6 py-3 rounded-full bg-white shadow"
           >
-            {/* Icon bubble */}
-            <div className="
-              w-11 h-11 rounded-full
-              bg-gradient-to-br from-mauve to-lavender
-              flex items-center justify-center
-              text-white text-xl shadow
-              group-hover:rotate-12 transition
-            ">
+            <div className="w-11 h-11 rounded-full bg-gradient-to-br from-mauve to-lavender flex items-center justify-center text-white">
               <BsStars />
             </div>
 
-            {/* Brand text */}
-            <div className="text-left leading-tight">
+            <div>
               <div className="flex items-center gap-2">
-                <h1 className="font-semibold text-lg tracking-tight">
-                  LiveOutLoud
-                </h1>
-
-                {/* LOL Badge */}
-                <span className="
-                  text-[10px] px-2 py-0.5 rounded-full
-                  bg-peach/60 font-medium
-                ">
+                <h1 className="font-semibold">LiveOutLoud</h1>
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-peach">
                   LOL
                 </span>
               </div>
-
               <p className="text-[11px] opacity-70 flex items-center gap-1">
                 Express your glow <HiHeart className="text-pink-400" />
               </p>
@@ -80,126 +124,88 @@ export default function Home() {
         </div>
 
         {/* HERO */}
-        <section className="pt-10 pb-16 text-center">
-          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-semibold mb-4 tracking-tight">
+        <section className="hero pt-16 pb-24 text-center">
+          <h1 className="text-4xl lg:text-5xl font-semibold mb-6">
             Glow. Heal. Feel Beautiful
           </h1>
 
-          <p className="opacity-80 max-w-xl mx-auto text-sm sm:text-base leading-relaxed mb-8">
+          <p className="max-w-xl mx-auto opacity-80 mb-10">
             Wellness essentials and stylish fashion carefully selected
             to help you feel confident, healthy, and beautiful every day.
           </p>
 
           <button
             onClick={() => navigate("/shop")}
-            className="
-              px-10 py-3 rounded-full
-              bg-gradient-to-r from-mauve to-lavender
-              text-white text-sm font-medium
-              shadow-lg hover:scale-[1.02]
-              hover:shadow-xl transition
-            "
+            className="px-10 py-3 rounded-full bg-gradient-to-r from-mauve to-lavender text-white shadow"
           >
             Visit Store
           </button>
         </section>
 
-        {/* 🛍 PRODUCTS PREVIEW */}
-        <section className="pb-24">
-          <h2 className="text-center text-lg font-semibold mb-10 opacity-80">
+        {/* FEATURED PRODUCTS */}
+        <section className="pb-32">
+          <h2 className="text-center text-lg font-semibold mb-14">
             Featured Picks
           </h2>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-            {products.map((p, i) => (
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-10">
+            {products.map((p) => (
               <div
-                key={i}
-                className="
-                  bg-peach/30
-                  rounded-3xl
-                  p-4
-                  shadow-md
-                  hover:shadow-xl
-                  transition
-                  hover:-translate-y-1
-                  cursor-pointer
-                "
+                key={p.id}
+                className="card bg-peach/30 rounded-3xl p-4 shadow cursor-pointer"
                 onClick={() => navigate("/shop")}
               >
-                {/* Image */}
-                <div className="overflow-hidden rounded-2xl mb-4">
-                  <img
-                    src={p.image}
-                    alt={p.name}
-                    className="w-full h-52 object-cover hover:scale-105 transition"
-                    loading="lazy"
-                  />
-                </div>
+                <img
+                  src={p.imageUrl}
+                  alt={p.name}
+                  className="w-full h-56 object-cover rounded-2xl mb-4"
+                />
 
-                {/* Category */}
-                <span className="
-                  inline-block mb-2
-                  text-[11px]
-                  px-3 py-1 rounded-full
-                  bg-lavender/50
-                  font-medium
-                ">
+                <span className="inline-block mb-2 text-xs px-3 py-1 rounded-full bg-lavender/50">
                   {p.category}
                 </span>
 
-                {/* Name */}
-                <h3 className="font-semibold mb-1">
-                  {p.name}
-                </h3>
-
-                {/* Description */}
-                <p className="text-sm opacity-70 leading-relaxed">
-                  {p.description}
-                </p>
+                <h3 className="font-semibold">{p.name}</h3>
+                <p className="text-sm opacity-70">{p.description}</p>
               </div>
             ))}
           </div>
         </section>
 
-        {/* 🌷 BRAND STORY */}
-        <section className="pb-24">
-          <div className="bg-milk/80 rounded-[36px] p-8 sm:p-12 border shadow-lg text-center">
+        {/* BRAND */}
+        <section className="pb-32">
+          <div className="bg-white rounded-[36px] p-10 text-center shadow">
             <h2 className="text-2xl font-semibold mb-4">
               About Our Brand
             </h2>
-            <p className="opacity-80 leading-relaxed text-sm sm:text-base max-w-3xl mx-auto">
-              We believe self-care is not a luxury — it’s a lifestyle.
-              Our store brings together trusted wellness products and
-              carefully selected fashion pieces that fit seamlessly
-              into your everyday life. Every product is chosen with
-              quality, comfort, and confidence in mind.
+            <p className="max-w-3xl mx-auto opacity-80">
+              Self-care is not a luxury — it’s a lifestyle. We curate
+              wellness and fashion pieces that fit seamlessly into your
+              everyday life.
             </p>
           </div>
         </section>
 
-        {/* 🎀 CATEGORIES */}
-        <section className="pb-32 grid sm:grid-cols-2 gap-8">
-          <div className="bg-lavender/40 rounded-[32px] p-8 shadow-md text-center">
-            <h3 className="text-lg font-semibold mb-2">
+        {/* CATEGORIES */}
+        <section className="pb-32 grid sm:grid-cols-2 gap-10">
+          <div className="bg-lavender/40 rounded-3xl p-8 text-center shadow">
+            <h3 className="font-semibold mb-2">
               Forever Living Products
             </h3>
-            <p className="text-sm opacity-80 leading-relaxed">
-              Natural wellness products designed to support your health
-              from the inside out.
+            <p className="text-sm opacity-80">
+              Natural wellness products designed to support your health.
             </p>
           </div>
 
-          <div className="bg-peach/40 rounded-[32px] p-8 shadow-md text-center">
-            <h3 className="text-lg font-semibold mb-2">
-              Fashion & Shirts
-            </h3>
-            <p className="text-sm opacity-80 leading-relaxed">
-              Comfortable, stylish pieces you can wear every day and
-              still feel confident.
+          <div className="bg-peach/40 rounded-3xl p-8 text-center shadow">
+            <h3 className="font-semibold mb-2">Fashion & Shirts</h3>
+            <p className="text-sm opacity-80">
+              Comfortable, stylish pieces you can wear every day.
             </p>
           </div>
         </section>
+
       </div>
-    </div>
+    </main>
   );
 }
