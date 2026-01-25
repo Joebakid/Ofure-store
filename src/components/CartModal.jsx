@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { FaTimes, FaTrash } from "react-icons/fa";
 import { useCart } from "../context/CartContext";
 import { getWhatsAppLink } from "../../lib/whatsapp";
+import { supabase } from "../lib/supabase";
 
 export default function CartModal() {
   const {
@@ -14,12 +15,26 @@ export default function CartModal() {
   } = useCart();
 
   const [showPaystackForm, setShowPaystackForm] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [form, setForm] = useState({
     name: "",
     email: "",
     phone: "",
     address: "",
   });
+
+  /* ================= LOCK BODY SCROLL WHEN OPEN ================= */
+  useEffect(() => {
+    if (open) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [open]);
 
   if (!open) return null;
 
@@ -42,12 +57,16 @@ export default function CartModal() {
 
   /* ================= PAYSTACK SUBMIT ================= */
   const submitPaystack = () => {
+    if (submitting) return;
+
     const { name, email, phone, address } = form;
 
     if (!name || !email || !phone || !address) {
       alert("Please fill all fields");
       return;
     }
+
+    setSubmitting(true);
 
     const handler = window.PaystackPop.setup({
       key: import.meta.env.VITE_PAYSTACK_PUBLIC_KEY,
@@ -66,14 +85,46 @@ export default function CartModal() {
           },
         ],
       },
-      callback: function (response) {
-        alert(`Payment successful!\nRef: ${response.reference}`);
-        clearCart();
-        setShowPaystackForm(false);
-        setOpen(false);
+
+      callback: async function (response) {
+        try {
+          const order = {
+            name,
+            email,
+            phone,
+            address,
+            items,
+            amount: total,
+            reference: response.reference,
+          };
+
+          const { error } = await supabase
+            .from("orders")
+            .insert(order);
+
+          if (error) {
+            console.error("❌ Order save failed:", error);
+            alert(
+              "Payment succeeded but order failed to save. Please contact support."
+            );
+          } else {
+            alert("✅ Payment successful! Your order has been received.");
+          }
+
+          clearCart();
+          setShowPaystackForm(false);
+          setOpen(false);
+        } catch (err) {
+          console.error("❌ Unexpected error:", err);
+          alert("Something went wrong. Please refresh and try again.");
+        } finally {
+          setSubmitting(false);
+        }
       },
+
       onClose: function () {
         console.log("Payment window closed");
+        setSubmitting(false);
       },
     });
 
@@ -82,16 +133,26 @@ export default function CartModal() {
 
   return (
     <div
-      className="fixed inset-0 z-50 bg-black/20 backdrop-blur-sm flex items-end sm:items-center justify-center"
+      className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center bg-black/30 backdrop-blur-sm"
       onClick={() => setOpen(false)}
     >
       {/* MODAL */}
       <div
         onClick={(e) => e.stopPropagation()}
-        className="bg-milk w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl p-6"
+        className="
+          w-full 
+          sm:max-w-md
+          bg-milk
+          rounded-t-3xl 
+          sm:rounded-3xl
+          p-6
+          max-h-[90vh]
+          overflow-y-auto
+          shadow-xl
+        "
       >
         {/* HEADER */}
-        <div className="flex justify-between items-center mb-6">
+        <div className="sticky top-0 bg-milk pb-4 flex justify-between items-center z-10">
           <h2 className="font-semibold text-lg">Your Cart</h2>
           <button onClick={() => setOpen(false)}>
             <FaTimes />
@@ -132,10 +193,10 @@ export default function CartModal() {
               ))}
             </div>
 
-            {/* CLEAR CART (FIXED) */}
+            {/* CLEAR CART */}
             <button
               onClick={(e) => {
-                e.stopPropagation(); // ✅ prevent modal close
+                e.stopPropagation();
                 clearCart();
                 setShowPaystackForm(false);
               }}
@@ -146,7 +207,7 @@ export default function CartModal() {
 
             {/* PAYSTACK FORM */}
             {showPaystackForm ? (
-              <div className="space-y-3">
+              <div className="space-y-3 pb-4">
                 <input
                   type="text"
                   placeholder="Full Name"
@@ -188,10 +249,13 @@ export default function CartModal() {
                 />
 
                 <button
+                  disabled={submitting}
                   onClick={submitPaystack}
-                  className="w-full py-3 rounded-full bg-black text-white text-sm"
+                  className="w-full py-3 rounded-full bg-black text-white text-sm disabled:opacity-50"
                 >
-                  Pay ₦{total.toLocaleString()}
+                  {submitting
+                    ? "Processing..."
+                    : `Pay ₦${total.toLocaleString()}`}
                 </button>
 
                 <button
@@ -202,7 +266,7 @@ export default function CartModal() {
                 </button>
               </div>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-3 pb-4">
                 <button
                   onClick={checkoutWhatsApp}
                   className="w-full py-3 rounded-full bg-mauve text-white text-sm"

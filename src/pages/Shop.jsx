@@ -33,7 +33,6 @@ export default function Shop() {
 
   const rawPage = Number(searchParams.get("page")) || 1;
 
-  /* ✅ SAFE SEARCH VALUE (never undefined) */
   const searchQuery = searchParams.get("q") ?? "";
 
   /* ================= FETCH ================= */
@@ -104,7 +103,7 @@ export default function Shop() {
     currentPage * ITEMS_PER_PAGE
   );
 
-  /* ================= SCROLL (GLITCH FIX) ================= */
+  /* ================= SCROLL FIX ================= */
   useEffect(() => {
     requestAnimationFrame(() => {
       window.scrollTo({ top: 0, behavior: "smooth" });
@@ -165,10 +164,56 @@ export default function Shop() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col relative">
+      {/* ================= FLOATING CART BUTTON ================= */}
+      <button
+        onClick={() => setOpen(true)}
+        className="
+          fixed 
+          bottom-6 
+          right-6 
+          z-50
+          w-14 
+          h-14
+          rounded-full 
+          bg-mauve 
+          text-white
+          flex 
+          items-center 
+          justify-center
+          shadow-xl
+          hover:scale-105
+          active:scale-95
+          transition
+        "
+      >
+        <FaShoppingBag size={20} />
+
+        {items.length > 0 && (
+          <span
+            className="
+              absolute 
+              -top-1 
+              -right-1
+              bg-black 
+              text-white 
+              text-xs
+              w-5 
+              h-5
+              rounded-full
+              flex 
+              items-center 
+              justify-center
+            "
+          >
+            {items.length}
+          </span>
+        )}
+      </button>
+
       {/* TOAST */}
       {toastVisible && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-mauve text-white px-5 py-2 rounded-full shadow-lg text-sm">
+        <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-40 bg-mauve text-white px-5 py-2 rounded-full shadow-lg text-sm">
           {cartMessage}
         </div>
       )}
@@ -177,7 +222,7 @@ export default function Shop() {
       {previewProduct && (
         <div
           onClick={() => setPreviewProduct(null)}
-          className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4"
+          className="fixed inset-0 z-40 bg-black/60 flex items-center justify-center p-4"
         >
           <div
             onClick={(e) => e.stopPropagation()}
@@ -221,26 +266,12 @@ export default function Shop() {
         <BackButton to="/" />
         <h1 className="text-xl font-semibold mx-auto">Store</h1>
 
-        <div className="flex gap-3">
-          <Link
-            to="/admin/products"
-            className="px-4 py-2 rounded-full text-sm bg-peach/50"
-          >
-            Admin
-          </Link>
-
-          <button
-            onClick={() => setOpen(true)}
-            disabled={!items.length}
-            className={`px-4 py-2 rounded-full text-sm flex items-center gap-1 ${
-              items.length
-                ? "bg-mauve text-white"
-                : "bg-peach/40 text-gray-400"
-            }`}
-          >
-            <FaShoppingBag /> {items.length}
-          </button>
-        </div>
+        <Link
+          to="/admin/products"
+          className="px-4 py-2 rounded-full text-sm bg-peach/50"
+        >
+          Admin
+        </Link>
       </section>
 
       {/* SEARCH */}
@@ -305,7 +336,7 @@ export default function Shop() {
         currentPage={currentPage}
         totalPages={totalPages}
         onPageChange={handlePageChange}
-        className="pb-20"
+        className="pb-32"
       />
     </div>
   );

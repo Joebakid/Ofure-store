@@ -22,6 +22,8 @@ export function CartProvider({ children }) {
 
   /* ================= LOAD CART ================= */
   useEffect(() => {
+    let mounted = true;
+
     async function loadCart() {
       const { data, error } = await supabase
         .from("cart_items")
@@ -33,17 +35,24 @@ export function CartProvider({ children }) {
         return;
       }
 
-      setItems(data || []);
+      if (mounted) {
+        setItems(data || []);
+      }
     }
 
     loadCart();
+
+    return () => {
+      mounted = false;
+    };
   }, [cartId]);
 
   /* ================= PRICE NORMALIZER ================= */
   const normalizePrice = (price) => {
     if (typeof price === "number") return price;
-    if (typeof price === "string")
+    if (typeof price === "string") {
       return Number(price.replace(/,/g, ""));
+    }
     return 0;
   };
 
@@ -52,47 +61,50 @@ export function CartProvider({ children }) {
     const price = normalizePrice(product.price);
     const existing = items.find((i) => i.name === product.name);
 
-    if (existing) {
-      const newQty = existing.qty + 1;
+    try {
+      if (existing) {
+        const newQty = existing.qty + 1;
 
-      await supabase
+        const { error } = await supabase
+          .from("cart_items")
+          .update({ qty: newQty })
+          .eq("id", existing.id);
+
+        if (error) throw error;
+
+        setItems((prev) =>
+          prev.map((i) =>
+            i.id === existing.id ? { ...i, qty: newQty } : i
+          )
+        );
+
+        setCartMessage(`Added again • ${product.name}`);
+        setCartEventId((id) => id + 1);
+        return;
+      }
+
+      const { data, error } = await supabase
         .from("cart_items")
-        .update({ qty: newQty })
-        .eq("id", existing.id);
+        .insert([
+          {
+            cart_id: cartId,
+            name: product.name,
+            image: product.image,
+            price,
+            qty: 1,
+          },
+        ])
+        .select()
+        .single();
 
-      setItems((prev) =>
-        prev.map((i) =>
-          i.id === existing.id ? { ...i, qty: newQty } : i
-        )
-      );
+      if (error) throw error;
 
-      setCartMessage(`Added again • ${product.name}`);
+      setItems((prev) => [...prev, data]);
+      setCartMessage(`Added to cart • ${product.name}`);
       setCartEventId((id) => id + 1);
-      return;
+    } catch (err) {
+      console.error("❌ Cart add error:", err);
     }
-
-    const { data, error } = await supabase
-      .from("cart_items")
-      .insert([
-        {
-          cart_id: cartId,
-          name: product.name,
-          image: product.image,
-          price,
-          qty: 1,
-        },
-      ])
-      .select()
-      .single();
-
-    if (error) {
-      console.error("❌ Insert error:", error);
-      return;
-    }
-
-    setItems((prev) => [...prev, data]);
-    setCartMessage(`Added to cart • ${product.name}`);
-    setCartEventId((id) => id + 1);
   };
 
   /* ================= REMOVE ITEM ================= */
@@ -100,24 +112,40 @@ export function CartProvider({ children }) {
     const item = items.find((i) => i.name === name);
     if (!item) return;
 
-    await supabase.from("cart_items").delete().eq("id", item.id);
-    setItems((prev) => prev.filter((i) => i.id !== item.id));
+    try {
+      const { error } = await supabase
+        .from("cart_items")
+        .delete()
+        .eq("id", item.id);
+
+      if (error) throw error;
+
+      setItems((prev) => prev.filter((i) => i.id !== item.id));
+    } catch (err) {
+      console.error("❌ Remove item error:", err);
+    }
   };
 
-  /* ================= CLEAR CART (THE FIX) ================= */
+  /* ================= CLEAR CART ================= */
   const clearCart = async () => {
     if (!items.length) return;
 
     const ids = items.map((i) => i.id);
 
-    await supabase
-      .from("cart_items")
-      .delete()
-      .in("id", ids);
+    try {
+      const { error } = await supabase
+        .from("cart_items")
+        .delete()
+        .in("id", ids);
 
-    setItems([]); // ✅ clears UI
-    setCartMessage("Cart cleared");
-    setCartEventId((id) => id + 1);
+      if (error) throw error;
+
+      setItems([]);
+      setCartMessage("Cart cleared");
+      setCartEventId((id) => id + 1);
+    } catch (err) {
+      console.error("❌ Clear cart error:", err);
+    }
   };
 
   /* ================= TOTAL ================= */
@@ -132,7 +160,7 @@ export function CartProvider({ children }) {
         items,
         addItem,
         removeItem,
-        clearCart, // ✅ now works
+        clearCart,
         total,
         open,
         setOpen,
