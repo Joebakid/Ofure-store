@@ -26,7 +26,6 @@ export default function Shop() {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [toastVisible, setToastVisible] = useState(false);
-
   const [previewProduct, setPreviewProduct] = useState(null);
 
   /* ================= PARAMS ================= */
@@ -129,7 +128,7 @@ export default function Shop() {
             <img
               src={previewProduct.imageUrl}
               alt={previewProduct.name}
-              className="w-full h-80 object-contain rounded-2xl"
+              className="w-full h-72 object-contain rounded-2xl"
             />
 
             <div className="mt-4 space-y-2">
@@ -187,7 +186,7 @@ export default function Shop() {
       </section>
 
       {/* CATEGORY */}
-      <section className="section flex gap-3 justify-center mb-10">
+      <section className="section flex gap-3 justify-center mb-8">
         {CATEGORIES.map((cat) => (
           <button
             key={cat}
@@ -208,7 +207,7 @@ export default function Shop() {
         <Loader />
       ) : (
         <>
-          <section className="section grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+          <section className="section grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-5">
             {paginatedProducts.map((product) => (
               <ProductCard
                 key={product.id}
@@ -219,11 +218,12 @@ export default function Shop() {
             ))}
           </section>
 
+          {/* Pagination ALWAYS visible */}
           <Pagination
             currentPage={currentPage}
             totalPages={totalPages}
             onPageChange={handlePageChange}
-            className="mt-12 pb-24"
+            className="mt-6 sm:mt-10 pb-20"
           />
         </>
       )}
