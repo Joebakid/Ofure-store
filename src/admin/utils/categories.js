@@ -1,5 +1,5 @@
 export const CATEGORIES = [
   "Shirts",
-  "Forever Living Products",
-  "Massey Cosmetics",
+  "Forever Living Products"
+//   "Massey Cosmetics",
 ];

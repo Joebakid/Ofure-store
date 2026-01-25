@@ -13,7 +13,6 @@ import Pagination from "../components/Pagination";
 const CATEGORIES = [
   "Shirts",
   "Forever Living Products",
-  "Massey Cosmetics",
 ];
 
 const ITEMS_PER_PAGE = 8;
@@ -21,8 +20,7 @@ const ITEMS_PER_PAGE = 8;
 export default function Shop() {
   const [searchParams, setSearchParams] = useSearchParams();
 
-  const { items, addItem, setOpen, cartEventId, cartMessage } =
-    useCart();
+  const { items, addItem, setOpen, cartEventId, cartMessage } = useCart();
 
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -42,8 +40,7 @@ export default function Shop() {
 
       const { data, error } = await supabase
         .from("products")
-        .select("*")
-        .order("created_at", { ascending: false });
+        .select("*");
 
       if (error) {
         console.error("❌ Fetch error:", error);
@@ -74,11 +71,14 @@ export default function Shop() {
     return () => clearTimeout(t);
   }, [cartEventId, cartMessage]);
 
-  /* ================= FILTER ================= */
-  const filteredProducts = useMemo(
-    () => products.filter((p) => p.category === activeCategory),
-    [products, activeCategory]
-  );
+  /* ================= FILTER + SORT ================= */
+  const filteredProducts = useMemo(() => {
+    return products
+      .filter((p) => p.category === activeCategory)
+      .sort((a, b) =>
+        a.name.localeCompare(b.name, undefined, { sensitivity: "base" })
+      );
+  }, [products, activeCategory]);
 
   const totalPages = Math.max(
     1,
@@ -96,7 +96,7 @@ export default function Shop() {
     currentPage * ITEMS_PER_PAGE
   );
 
-  /* ================= SCROLL (FIXED) ================= */
+  /* ================= SCROLL ================= */
   useEffect(() => {
     window.scrollTo({
       top: 0,
