@@ -3,30 +3,36 @@ import { useNavigate } from "react-router-dom";
 import { BsStars } from "react-icons/bs";
 import { HiHeart } from "react-icons/hi";
 import gsap from "gsap";
+
 import { supabase } from "../lib/supabase";
 import Loader from "../components/Loader";
+
+/* ================= FEATURED PRODUCT NAMES ================= */
+const FEATURED_PRODUCT_NAMES = [
+  "Forever Arctic Sea",
+  "Forever Bright Toothgel",
+  "Black and White Short-sleeve AxePeak Jersey",
+];
 
 export default function Home() {
   const navigate = useNavigate();
   const root = useRef(null);
 
   const [products, setProducts] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [ready, setReady] = useState(false); // 👈 gate render
+  const [ready, setReady] = useState(false);
 
-  /* ================= FETCH LATEST PRODUCTS ================= */
+  /* ================= FETCH FEATURED PRODUCTS ================= */
   useEffect(() => {
-    async function fetchLatestProducts() {
+    async function fetchFeaturedProducts() {
       const { data, error } = await supabase
         .from("products")
         .select("*")
-        .order("created_at", { ascending: false })
-        .limit(3);
+        .in("name", FEATURED_PRODUCT_NAMES);
 
       if (error) {
         console.error("❌ Home fetch error:", error);
         setProducts([]);
-        setLoading(false);
+        setReady(true);
         return;
       }
 
@@ -41,13 +47,12 @@ export default function Home() {
       });
 
       setProducts(withImages);
-      setLoading(false);
 
-      // 🕒 small delay to avoid paint race
+      // Small delay to avoid animation paint race
       setTimeout(() => setReady(true), 300);
     }
 
-    fetchLatestProducts();
+    fetchFeaturedProducts();
   }, []);
 
   /* ================= GSAP ================= */
@@ -55,14 +60,14 @@ export default function Home() {
     if (!ready || !root.current) return;
 
     const ctx = gsap.context(() => {
-      const tl = gsap.timeline();
-
-      tl.from(".logo", {
-        y: -30,
-        opacity: 0,
-        duration: 0.6,
-        ease: "power3.out",
-      })
+      gsap
+        .timeline()
+        .from(".logo", {
+          y: -30,
+          opacity: 0,
+          duration: 0.6,
+          ease: "power3.out",
+        })
         .from(
           ".hero > *",
           {
@@ -92,13 +97,12 @@ export default function Home() {
 
   /* ================= LOADER GATE ================= */
   if (!ready) {
-    return <Loader />; // 👈 NOTHING renders before this
+    return <Loader />;
   }
 
   return (
     <main ref={root} className="w-full bg-milk">
       <div className="max-w-6xl mx-auto px-6">
-
         {/* LOGO */}
         <div className="logo pt-10 flex justify-center">
           <button
@@ -204,7 +208,6 @@ export default function Home() {
             </p>
           </div>
         </section>
-
       </div>
     </main>
   );
