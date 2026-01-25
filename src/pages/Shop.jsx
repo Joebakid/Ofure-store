@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from "react";
 import { useSearchParams, Link } from "react-router-dom";
-import { FaShoppingBag } from "react-icons/fa";
+import { FaShoppingBag, FaTimes } from "react-icons/fa";
 
 import BackButton from "../components/BackButton";
 import Loader from "../components/Loader";
@@ -32,6 +32,9 @@ export default function Shop() {
     searchParams.get("category") || CATEGORIES[0];
 
   const rawPage = Number(searchParams.get("page")) || 1;
+
+  /* ✅ SAFE SEARCH VALUE (never undefined) */
+  const searchQuery = searchParams.get("q") ?? "";
 
   /* ================= FETCH ================= */
   useEffect(() => {
@@ -72,16 +75,19 @@ export default function Shop() {
     return () => clearTimeout(t);
   }, [cartEventId, cartMessage]);
 
-  /* ================= FILTER + SORT ================= */
+  /* ================= FILTER + SORT + SEARCH ================= */
   const filteredProducts = useMemo(() => {
     return products
       .filter((p) => p.category === activeCategory)
+      .filter((p) =>
+        p.name.toLowerCase().includes(searchQuery.toLowerCase())
+      )
       .sort((a, b) =>
         a.name.localeCompare(b.name, undefined, {
           sensitivity: "base",
         })
       );
-  }, [products, activeCategory]);
+  }, [products, activeCategory, searchQuery]);
 
   const totalPages = Math.max(
     1,
@@ -103,23 +109,49 @@ export default function Shop() {
     requestAnimationFrame(() => {
       window.scrollTo({ top: 0, behavior: "smooth" });
     });
-  }, [currentPage, activeCategory]);
+  }, [currentPage, activeCategory, searchQuery]);
 
   /* ================= HANDLERS ================= */
   function handlePageChange(page) {
     if (page === currentPage) return;
 
-    setSearchParams({
+    const next = {
       category: activeCategory,
       page,
-    });
+    };
+
+    if (searchQuery) next.q = searchQuery;
+
+    setSearchParams(next);
   }
 
   function handleCategoryChange(cat) {
     if (cat === activeCategory) return;
 
-    setSearchParams({
+    const next = {
       category: cat,
+      page: 1,
+    };
+
+    if (searchQuery) next.q = searchQuery;
+
+    setSearchParams(next);
+  }
+
+  function handleSearchChange(value) {
+    const next = {
+      category: activeCategory,
+      page: 1,
+    };
+
+    if (value) next.q = value;
+
+    setSearchParams(next);
+  }
+
+  function clearSearch() {
+    setSearchParams({
+      category: activeCategory,
       page: 1,
     });
   }
@@ -138,6 +170,49 @@ export default function Shop() {
       {toastVisible && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-mauve text-white px-5 py-2 rounded-full shadow-lg text-sm">
           {cartMessage}
+        </div>
+      )}
+
+      {/* PRODUCT PREVIEW MODAL */}
+      {previewProduct && (
+        <div
+          onClick={() => setPreviewProduct(null)}
+          className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="bg-white rounded-3xl max-w-md w-full p-4"
+          >
+            <img
+              src={previewProduct.imageUrl}
+              alt={previewProduct.name}
+              className="w-full h-72 object-contain rounded-2xl"
+            />
+
+            <div className="mt-4 space-y-2">
+              <h2 className="font-semibold">
+                {previewProduct.name}
+              </h2>
+
+              <p className="text-sm text-gray-600">
+                {previewProduct.description}
+              </p>
+
+              <p className="font-medium text-mauve">
+                ₦{Number(previewProduct.price).toLocaleString()}
+              </p>
+
+              <button
+                onClick={() => {
+                  handleAddToCart(previewProduct);
+                  setPreviewProduct(null);
+                }}
+                className="mt-2 w-full py-2 rounded-full bg-mauve text-white"
+              >
+                Add to cart
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
@@ -165,6 +240,28 @@ export default function Shop() {
           >
             <FaShoppingBag /> {items.length}
           </button>
+        </div>
+      </section>
+
+      {/* SEARCH */}
+      <section className="section flex justify-center mb-6">
+        <div className="relative w-full max-w-md">
+          <input
+            type="text"
+            placeholder="Search products…"
+            value={searchQuery}
+            onChange={(e) => handleSearchChange(e.target.value)}
+            className="w-full px-4 py-2 pr-10 rounded-full border border-gray-200 focus:outline-none focus:ring-2 focus:ring-mauve/40"
+          />
+
+          {searchQuery && (
+            <button
+              onClick={clearSearch}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+            >
+              <FaTimes size={12} />
+            </button>
+          )}
         </div>
       </section>
 
