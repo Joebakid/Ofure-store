@@ -14,7 +14,7 @@ export function CartProvider({ children }) {
   const [items, setItems] = useState([]);
   const [open, setOpen] = useState(false);
 
-  // 🔔 notification trigger (always fires)
+  // 🔔 notification trigger
   const [cartEventId, setCartEventId] = useState(0);
   const [cartMessage, setCartMessage] = useState("");
 
@@ -23,8 +23,6 @@ export function CartProvider({ children }) {
   /* ================= LOAD CART ================= */
   useEffect(() => {
     async function loadCart() {
-      console.log("🛒 Loading cart:", cartId);
-
       const { data, error } = await supabase
         .from("cart_items")
         .select("*")
@@ -35,7 +33,6 @@ export function CartProvider({ children }) {
         return;
       }
 
-      console.log("✅ Cart data:", data);
       setItems(data || []);
     }
 
@@ -45,14 +42,13 @@ export function CartProvider({ children }) {
   /* ================= PRICE NORMALIZER ================= */
   const normalizePrice = (price) => {
     if (typeof price === "number") return price;
-    if (typeof price === "string") return Number(price.replace(/,/g, ""));
+    if (typeof price === "string")
+      return Number(price.replace(/,/g, ""));
     return 0;
   };
 
   /* ================= ADD ITEM ================= */
   const addItem = async (product) => {
-    console.log("➕ ADD ITEM:", product);
-
     const price = normalizePrice(product.price);
     const existing = items.find((i) => i.name === product.name);
 
@@ -70,7 +66,6 @@ export function CartProvider({ children }) {
         )
       );
 
-      // 🔔 FORCE notification every time
       setCartMessage(`Added again • ${product.name}`);
       setCartEventId((id) => id + 1);
       return;
@@ -82,21 +77,20 @@ export function CartProvider({ children }) {
         {
           cart_id: cartId,
           name: product.name,
-          image: product.image, // MUST be full public URL
+          image: product.image,
           price,
           qty: 1,
         },
       ])
-      .select();
+      .select()
+      .single();
 
     if (error) {
       console.error("❌ Insert error:", error);
       return;
     }
 
-    setItems((prev) => [...prev, data[0]]);
-
-    // 🔔 FORCE notification
+    setItems((prev) => [...prev, data]);
     setCartMessage(`Added to cart • ${product.name}`);
     setCartEventId((id) => id + 1);
   };
@@ -108,6 +102,22 @@ export function CartProvider({ children }) {
 
     await supabase.from("cart_items").delete().eq("id", item.id);
     setItems((prev) => prev.filter((i) => i.id !== item.id));
+  };
+
+  /* ================= CLEAR CART (THE FIX) ================= */
+  const clearCart = async () => {
+    if (!items.length) return;
+
+    const ids = items.map((i) => i.id);
+
+    await supabase
+      .from("cart_items")
+      .delete()
+      .in("id", ids);
+
+    setItems([]); // ✅ clears UI
+    setCartMessage("Cart cleared");
+    setCartEventId((id) => id + 1);
   };
 
   /* ================= TOTAL ================= */
@@ -122,11 +132,10 @@ export function CartProvider({ children }) {
         items,
         addItem,
         removeItem,
+        clearCart, // ✅ now works
         total,
         open,
         setOpen,
-
-        // 🔔 notification API
         cartEventId,
         cartMessage,
       }}
@@ -137,7 +146,7 @@ export function CartProvider({ children }) {
 }
 
 /* ======================================================
-   ✅ NAMED EXPORT (THIS FIXES YOUR ERROR)
+   HOOK
 ====================================================== */
 export function useCart() {
   const ctx = useContext(CartContext);

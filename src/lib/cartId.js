@@ -1,3 +1,4 @@
+// src/lib/cartId.js
 export function getCartId() {
   let id = localStorage.getItem("cart_id");
 

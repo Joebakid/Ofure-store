@@ -4,7 +4,14 @@ import { useCart } from "../context/CartContext";
 import { getWhatsAppLink } from "../../lib/whatsapp";
 
 export default function CartModal() {
-  const { items, removeItem, total, open, setOpen } = useCart();
+  const {
+    items,
+    removeItem,
+    total,
+    open,
+    setOpen,
+    clearCart,
+  } = useCart();
 
   const [showPaystackForm, setShowPaystackForm] = useState(false);
   const [form, setForm] = useState({
@@ -61,6 +68,7 @@ export default function CartModal() {
       },
       callback: function (response) {
         alert(`Payment successful!\nRef: ${response.reference}`);
+        clearCart();
         setShowPaystackForm(false);
         setOpen(false);
       },
@@ -73,8 +81,15 @@ export default function CartModal() {
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/20 backdrop-blur-sm flex items-end sm:items-center justify-center">
-      <div className="bg-milk w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl p-6">
+    <div
+      className="fixed inset-0 z-50 bg-black/20 backdrop-blur-sm flex items-end sm:items-center justify-center"
+      onClick={() => setOpen(false)}
+    >
+      {/* MODAL */}
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="bg-milk w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl p-6"
+      >
         {/* HEADER */}
         <div className="flex justify-between items-center mb-6">
           <h2 className="font-semibold text-lg">Your Cart</h2>
@@ -91,7 +106,7 @@ export default function CartModal() {
         ) : (
           <>
             {/* ITEMS */}
-            <div className="space-y-4 mb-6">
+            <div className="space-y-4 mb-4">
               {items.map((item) => (
                 <div
                   key={item.name}
@@ -116,6 +131,18 @@ export default function CartModal() {
                 </div>
               ))}
             </div>
+
+            {/* CLEAR CART (FIXED) */}
+            <button
+              onClick={(e) => {
+                e.stopPropagation(); // ✅ prevent modal close
+                clearCart();
+                setShowPaystackForm(false);
+              }}
+              className="w-full mb-4 py-2 rounded-full text-sm border border-red-300 text-red-600 hover:bg-red-50 cursor-pointer"
+            >
+              Clear Cart
+            </button>
 
             {/* PAYSTACK FORM */}
             {showPaystackForm ? (
@@ -175,7 +202,6 @@ export default function CartModal() {
                 </button>
               </div>
             ) : (
-              /* ACTION BUTTONS */
               <div className="space-y-3">
                 <button
                   onClick={checkoutWhatsApp}
