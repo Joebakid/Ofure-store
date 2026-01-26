@@ -6,7 +6,7 @@ import { supabase } from "../lib/supabase";
 import { payWithPaystack } from "../lib/paystack";
 
 /* ================= DELIVERY CONFIG ================= */
-const BASE_DELIVERY_FEE = 100; // Starts at ₦100 (can increase later)
+const BASE_DELIVERY_FEE = 3000; // Starts at ₦3000 (can increase up to ₦5,000)
 
 /* =================================================== */
 
@@ -124,12 +124,10 @@ export default function CartModal() {
         throw new Error(text);
       }
 
-      const data = await res.json();
-      console.log("📧 Email sent:", data);
+      await res.json();
       return true;
     } catch (err) {
       console.error("❌ Email failed:", err);
-      alert("❌ Order email failed. Please contact support.");
       return false;
     }
   }
@@ -165,34 +163,40 @@ export default function CartModal() {
 
       /* ✅ SUCCESS */
       onSuccess: async (response) => {
-        try {
-          const order = {
-            name,
-            email,
-            phone,
-            address,
-            items,
-            subtotal: total,
-            delivery_fee: deliveryFee,
-            amount: grandTotal,
-            reference: response.reference,
-          };
+        const order = {
+          name,
+          email,
+          phone,
+          address,
+          items,
+          subtotal: total,
+          delivery_fee: deliveryFee,
+          amount: grandTotal,
+          reference: response.reference,
+          status: "paid",
+        };
 
-          // 🔥 Save order
-          const { error } = await supabase
+        try {
+          // ✅ Save order FIRST
+          const { data, error } = await supabase
             .from("orders")
-            .insert(order);
+            .insert([order])
+            .select()
+            .single();
 
           if (error) {
             console.error("❌ Order save failed:", error);
-            alert("⚠️ Payment succeeded but order failed to save.");
+            alert("❌ Payment received but order could not be saved.");
+            return; // 🚨 HARD STOP — nothing else runs
           }
 
-          // 📧 Always attempt email
-          const emailOk = await sendOrderEmail(order);
+          console.log("✅ Order saved:", data);
+
+          // ✅ Send email only after DB success
+          const emailOk = await sendOrderEmail(data);
 
           if (!emailOk) {
-            alert("⚠️ Payment successful but email failed.");
+            alert("⚠️ Order saved but confirmation email failed.");
           } else {
             alert("✅ Payment successful! Confirmation email sent.");
           }
@@ -202,8 +206,8 @@ export default function CartModal() {
           setOpen(false);
           setErrors({});
         } catch (err) {
-          console.error("❌ Order handling error:", err);
-          alert("Order failed after payment.");
+          console.error("❌ Unexpected checkout error:", err);
+          alert("❌ Unexpected error while processing order.");
         } finally {
           setSubmitting(false);
         }
