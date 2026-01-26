@@ -1,9 +1,13 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useMemo } from "react";
 import { FaTimes, FaTrash } from "react-icons/fa";
 import { useCart } from "../context/CartContext";
 import { getWhatsAppLink } from "../../lib/whatsapp";
 import { supabase } from "../lib/supabase";
-import { payWithPaystack } from "../lib/paystack"; // ✅ USE HELPER
+import { payWithPaystack } from "../lib/paystack";
+
+/* ================= DELIVERY CONFIG ================= */
+const BASE_DELIVERY_FEE = 3000;
+const MAX_DELIVERY_FEE = 5000;
 
 export default function CartModal() {
   const {
@@ -15,7 +19,7 @@ export default function CartModal() {
     clearCart,
   } = useCart();
 
-  const scrollYRef = useRef(0); // ✅ remembers scroll position
+  const scrollYRef = useRef(0);
 
   const [showPaystackForm, setShowPaystackForm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -28,6 +32,13 @@ export default function CartModal() {
   });
 
   const [errors, setErrors] = useState({});
+
+  /* ================= TOTAL CALC ================= */
+  const deliveryFee = BASE_DELIVERY_FEE;
+
+  const grandTotal = useMemo(() => {
+    return total + deliveryFee;
+  }, [total]);
 
   /* ================= HARD SCROLL LOCK ================= */
   useEffect(() => {
@@ -72,8 +83,8 @@ export default function CartModal() {
 
     const link = getWhatsAppLink({
       name: "Store Order",
-      price: `₦${total.toLocaleString()}`,
-      category: message,
+      price: `₦${grandTotal.toLocaleString()}`,
+      category: `${message} + Delivery ₦${deliveryFee.toLocaleString()}`,
     });
 
     window.open(link, "_blank");
@@ -110,7 +121,7 @@ export default function CartModal() {
     setSubmitting(true);
 
     payWithPaystack({
-      amount: total,
+      amount: grandTotal,
       email: email.trim(),
 
       metadata: {
@@ -121,6 +132,10 @@ export default function CartModal() {
           {
             display_name: "Items",
             value: items.map((i) => `${i.name} x${i.qty}`).join(", "),
+          },
+          {
+            display_name: "Delivery Fee",
+            value: `₦${deliveryFee.toLocaleString()}`,
           },
         ],
       },
@@ -134,7 +149,9 @@ export default function CartModal() {
             phone,
             address,
             items,
-            amount: total,
+            subtotal: total,
+            delivery_fee: deliveryFee,
+            amount: grandTotal,
             reference: response.reference,
           };
 
@@ -231,6 +248,29 @@ export default function CartModal() {
               ))}
             </div>
 
+            {/* PRICE BREAKDOWN */}
+            <div className="bg-peach/30 rounded-xl p-3 mb-4 space-y-1 text-sm">
+              <div className="flex justify-between">
+                <span>Subtotal</span>
+                <span>₦{total.toLocaleString()}</span>
+              </div>
+
+              <div className="flex justify-between">
+                <span>Delivery Fee</span>
+                <span>₦{deliveryFee.toLocaleString()}</span>
+              </div>
+
+              <p className="text-xs text-gray-600 mt-1">
+                Delivery fee starts at ₦3,000 and may increase up to ₦5,000
+                depending on your location.
+              </p>
+
+              <div className="flex justify-between font-semibold pt-2 border-t mt-2">
+                <span>Total</span>
+                <span>₦{grandTotal.toLocaleString()}</span>
+              </div>
+            </div>
+
             {/* CLEAR CART */}
             <button
               onClick={(e) => {
@@ -247,7 +287,6 @@ export default function CartModal() {
             {/* PAYSTACK FORM */}
             {showPaystackForm ? (
               <div className="space-y-3 pb-4">
-                {/* NAME */}
                 <input
                   type="text"
                   placeholder="Full Name"
@@ -261,7 +300,6 @@ export default function CartModal() {
                   <p className="text-xs text-red-600">{errors.name}</p>
                 )}
 
-                {/* EMAIL */}
                 <input
                   type="email"
                   placeholder="Email"
@@ -275,7 +313,6 @@ export default function CartModal() {
                   <p className="text-xs text-red-600">{errors.email}</p>
                 )}
 
-                {/* PHONE */}
                 <input
                   type="tel"
                   placeholder="Phone Number"
@@ -289,7 +326,6 @@ export default function CartModal() {
                   <p className="text-xs text-red-600">{errors.phone}</p>
                 )}
 
-                {/* ADDRESS */}
                 <textarea
                   placeholder="Delivery Address"
                   value={form.address}
@@ -313,7 +349,7 @@ export default function CartModal() {
                 >
                   {submitting
                     ? "Processing..."
-                    : `Pay ₦${total.toLocaleString()}`}
+                    : `Pay ₦${grandTotal.toLocaleString()}`}
                 </button>
 
                 <button
@@ -332,7 +368,7 @@ export default function CartModal() {
                   onClick={checkoutWhatsApp}
                   className="w-full py-3 rounded-full bg-mauve text-white text-sm"
                 >
-                  Checkout via WhatsApp · ₦{total.toLocaleString()}
+                  Checkout via WhatsApp · ₦{grandTotal.toLocaleString()}
                 </button>
 
                 <button

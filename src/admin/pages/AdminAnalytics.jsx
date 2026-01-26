@@ -5,6 +5,9 @@ import AnalyticsGrid from "../components/AnalyticsGrid";
 import AnalyticsTable from "../components/AnalyticsTable";
 import BackButton from "../../components/BackButton";
 import Loader from "../../components/Loader";
+import Pagination from "../../components/Pagination";
+
+const PAGE_SIZE = 6;
 
 export default function AdminAnalytics() {
   const [events, setEvents] = useState([]);
@@ -17,6 +20,12 @@ export default function AdminAnalytics() {
       now.getMonth() + 1
     ).padStart(2, "0")}`;
   });
+
+  // 📄 Pagination state (independent per table)
+  const [countryPage, setCountryPage] = useState(1);
+  const [loginPage, setLoginPage] = useState(1);
+  const [postPage, setPostPage] = useState(1);
+  const [viewPage, setViewPage] = useState(1);
 
   /* ================= LOAD EVENTS ================= */
   useEffect(() => {
@@ -55,6 +64,14 @@ export default function AdminAnalytics() {
       );
     });
   }, [events, selectedMonth]);
+
+  // 🔁 Reset pagination when month changes
+  useEffect(() => {
+    setCountryPage(1);
+    setLoginPage(1);
+    setPostPage(1);
+    setViewPage(1);
+  }, [selectedMonth]);
 
   /* ================= DERIVED STATS ================= */
   const stats = useMemo(() => {
@@ -129,8 +146,34 @@ export default function AdminAnalytics() {
     return Object.entries(map)
       .map(([name, views]) => ({ name, views }))
       .sort((a, b) => b.views - a.views)
-      .slice(0, 10);
+      .slice(0, 50);
   }, [filteredEvents]);
+
+  /* ================= PAGINATION HELPERS ================= */
+  function paginate(list, page) {
+    const start = (page - 1) * PAGE_SIZE;
+    return list.slice(start, start + PAGE_SIZE);
+  }
+
+  const pagedCountries = useMemo(
+    () => paginate(countryStats, countryPage),
+    [countryStats, countryPage]
+  );
+
+  const pagedLogins = useMemo(
+    () => paginate(adminLogins, loginPage),
+    [adminLogins, loginPage]
+  );
+
+  const pagedPosts = useMemo(
+    () => paginate(productPosts, postPage),
+    [productPosts, postPage]
+  );
+
+  const pagedViews = useMemo(
+    () => paginate(mostViewedProducts, viewPage),
+    [mostViewedProducts, viewPage]
+  );
 
   /* ================= LOADING ================= */
   if (loading) {
@@ -180,11 +223,22 @@ export default function AdminAnalytics() {
 
         <AnalyticsTable
           columns={["Country", "Visits"]}
-          rows={countryStats.map((c) => [
+          rows={pagedCountries.map((c) => [
             c.country,
             c.count,
           ])}
         />
+
+        <div className="mt-6">
+          <Pagination
+            currentPage={countryPage}
+            totalPages={Math.max(
+              1,
+              Math.ceil(countryStats.length / PAGE_SIZE)
+            )}
+            onPageChange={setCountryPage}
+          />
+        </div>
       </section>
 
       {/* 👤 ADMIN LOGIN ACTIVITY */}
@@ -195,11 +249,22 @@ export default function AdminAnalytics() {
 
         <AnalyticsTable
           columns={["Admin Email", "Date"]}
-          rows={adminLogins.map((e) => [
+          rows={pagedLogins.map((e) => [
             e.metadata?.email || "Unknown",
             new Date(e.created_at).toLocaleString(),
           ])}
         />
+
+        <div className="mt-6">
+          <Pagination
+            currentPage={loginPage}
+            totalPages={Math.max(
+              1,
+              Math.ceil(adminLogins.length / PAGE_SIZE)
+            )}
+            onPageChange={setLoginPage}
+          />
+        </div>
       </section>
 
       {/* 📦 PRODUCT POSTS */}
@@ -210,12 +275,23 @@ export default function AdminAnalytics() {
 
         <AnalyticsTable
           columns={["Admin Email", "Product", "Date"]}
-          rows={productPosts.map((e) => [
+          rows={pagedPosts.map((e) => [
             e.metadata?.email || "Unknown",
             e.metadata?.name || "—",
             new Date(e.created_at).toLocaleString(),
           ])}
         />
+
+        <div className="mt-6">
+          <Pagination
+            currentPage={postPage}
+            totalPages={Math.max(
+              1,
+              Math.ceil(productPosts.length / PAGE_SIZE)
+            )}
+            onPageChange={setPostPage}
+          />
+        </div>
       </section>
 
       {/* 🔥 MOST VIEWED PRODUCTS */}
@@ -226,11 +302,24 @@ export default function AdminAnalytics() {
 
         <AnalyticsTable
           columns={["Product", "Views"]}
-          rows={mostViewedProducts.map((p) => [
+          rows={pagedViews.map((p) => [
             p.name,
             p.views,
           ])}
         />
+
+        <div className="mt-6">
+          <Pagination
+            currentPage={viewPage}
+            totalPages={Math.max(
+              1,
+              Math.ceil(
+                mostViewedProducts.length / PAGE_SIZE
+              )
+            )}
+            onPageChange={setViewPage}
+          />
+        </div>
       </section>
     </div>
   );
