@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { FaTimes, FaTrash } from "react-icons/fa";
 import { useCart } from "../context/CartContext";
 import { getWhatsAppLink } from "../../lib/whatsapp";
@@ -15,6 +15,8 @@ export default function CartModal() {
     clearCart,
   } = useCart();
 
+  const scrollYRef = useRef(0); // ✅ remembers scroll position
+
   const [showPaystackForm, setShowPaystackForm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
@@ -25,18 +27,36 @@ export default function CartModal() {
     address: "",
   });
 
-  const [errors, setErrors] = useState({}); // ✅ validation errors
+  const [errors, setErrors] = useState({});
 
-  /* ================= LOCK BODY SCROLL WHEN OPEN ================= */
+  /* ================= HARD SCROLL LOCK ================= */
   useEffect(() => {
     if (open) {
-      document.body.style.overflow = "hidden";
+      scrollYRef.current = window.scrollY;
+
+      document.body.style.position = "fixed";
+      document.body.style.top = `-${scrollYRef.current}px`;
+      document.body.style.left = "0";
+      document.body.style.right = "0";
+      document.body.style.width = "100%";
     } else {
-      document.body.style.overflow = "";
+      const y = scrollYRef.current;
+
+      document.body.style.position = "";
+      document.body.style.top = "";
+      document.body.style.left = "";
+      document.body.style.right = "";
+      document.body.style.width = "";
+
+      window.scrollTo(0, y);
     }
 
     return () => {
-      document.body.style.overflow = "";
+      document.body.style.position = "";
+      document.body.style.top = "";
+      document.body.style.left = "";
+      document.body.style.right = "";
+      document.body.style.width = "";
     };
   }, [open]);
 
@@ -77,15 +97,13 @@ export default function CartModal() {
     }
 
     setErrors(newErrors);
-
     return Object.keys(newErrors).length === 0;
   };
 
   /* ================= PAYSTACK SUBMIT ================= */
   const submitPaystack = () => {
     if (submitting) return;
-
-    if (!validateForm()) return; // ✅ block invalid submit
+    if (!validateForm()) return;
 
     const { name, email, phone, address } = form;
 
