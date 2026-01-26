@@ -2,12 +2,18 @@ import { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { normalizeImagePath } from "../utils/normalizeImagePath";
 
+// ✅ Analytics
+import { EVENTS } from "../../analytics/analyticsEvents";
+import { logEvent } from "../../analytics/analyticsClient";
+
 export function useAdminProducts() {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(false);
 
+  /* ================= FETCH ================= */
   async function fetchProducts() {
     console.log("📦 fetchProducts");
+
     const { data, error } = await supabase
       .from("products")
       .select("*")
@@ -19,13 +25,14 @@ export function useAdminProducts() {
     }
 
     setProducts(
-      data.map((p) => ({
+      (data || []).map((p) => ({
         ...p,
         image: normalizeImagePath(p.image),
       }))
     );
   }
 
+  /* ================= CREATE ================= */
   async function createProduct(payload) {
     console.log("🟢 createProduct", payload);
     setLoading(true);
@@ -47,20 +54,43 @@ export function useAdminProducts() {
       }
     }
 
-    const { error } = await supabase.from("products").insert({
-      name: payload.name,
-      price: payload.price,
-      category: payload.category,
-      description: payload.description,
-      image: imagePath,
-    });
+    const { data: inserted, error } = await supabase
+      .from("products")
+      .insert({
+        name: payload.name,
+        price: payload.price,
+        category: payload.category,
+        description: payload.description,
+        image: imagePath,
+      })
+      .select()
+      .single();
 
-    if (error) console.error("❌ insert error", error);
+    if (error) {
+      console.error("❌ insert error", error);
+    } else {
+      // ✅ Track product creation with email + admin id
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      logEvent(
+        EVENTS.PRODUCT_CREATE,
+        {
+          name: inserted.name,
+          price: inserted.price,
+          category: inserted.category,
+          email: user?.email,
+        },
+        user?.id
+      );
+    }
 
     await fetchProducts();
     setLoading(false);
   }
 
+  /* ================= UPDATE ================= */
   async function updateProduct(id, updates, imageFile) {
     console.log("✏️ updateProduct", id, updates);
     setLoading(true);
@@ -93,6 +123,7 @@ export function useAdminProducts() {
     setLoading(false);
   }
 
+  /* ================= DELETE ================= */
   async function deleteProduct(id, image) {
     console.log("🗑 deleteProduct", id);
 

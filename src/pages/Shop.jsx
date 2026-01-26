@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 import { useSearchParams, Link } from "react-router-dom";
 import { FaShoppingBag, FaTimes } from "react-icons/fa";
 
@@ -9,12 +9,12 @@ import ProductCard from "../components/ProductCard";
 import { useCart } from "../context/CartContext";
 import { supabase } from "../lib/supabase";
 
-/* ================= CATEGORIES ================= */
-const CATEGORIES = [
-  "Shirts",
-  "Forever Living Products",
-];
+// ✅ Analytics
+import { EVENTS } from "../analytics/analyticsEvents";
+import { logEvent } from "../analytics/analyticsClient";
 
+/* ================= CATEGORIES ================= */
+const CATEGORIES = ["Shirts", "Forever Living Products"];
 const ITEMS_PER_PAGE = 8;
 
 export default function Shop() {
@@ -27,12 +27,14 @@ export default function Shop() {
   const [toastVisible, setToastVisible] = useState(false);
   const [previewProduct, setPreviewProduct] = useState(null);
 
+  // ✅ Prevent spam analytics when clicking fast
+  const lastViewedRef = useRef(null);
+
   /* ================= PARAMS ================= */
   const activeCategory =
     searchParams.get("category") || CATEGORIES[0];
 
   const rawPage = Number(searchParams.get("page")) || 1;
-
   const searchQuery = searchParams.get("q") ?? "";
 
   /* ================= FETCH ================= */
@@ -45,7 +47,7 @@ export default function Shop() {
         .select("*");
 
       if (error) {
-        console.error(error);
+        console.error("❌ Product fetch error:", error);
         setLoading(false);
         return;
       }
@@ -114,11 +116,7 @@ export default function Shop() {
   function handlePageChange(page) {
     if (page === currentPage) return;
 
-    const next = {
-      category: activeCategory,
-      page,
-    };
-
+    const next = { category: activeCategory, page };
     if (searchQuery) next.q = searchQuery;
 
     setSearchParams(next);
@@ -127,22 +125,14 @@ export default function Shop() {
   function handleCategoryChange(cat) {
     if (cat === activeCategory) return;
 
-    const next = {
-      category: cat,
-      page: 1,
-    };
-
+    const next = { category: cat, page: 1 };
     if (searchQuery) next.q = searchQuery;
 
     setSearchParams(next);
   }
 
   function handleSearchChange(value) {
-    const next = {
-      category: activeCategory,
-      page: 1,
-    };
-
+    const next = { category: activeCategory, page: 1 };
     if (value) next.q = value;
 
     setSearchParams(next);
@@ -163,28 +153,34 @@ export default function Shop() {
     });
   }
 
+  // ✅ Track product preview (VIEW EVENT)
+  function handlePreview(product) {
+    setPreviewProduct(product);
+
+    // 🛡 prevent duplicate spam logs
+    if (lastViewedRef.current === product.id) return;
+    lastViewedRef.current = product.id;
+
+    console.log("👁 Tracking product view:", product.name);
+
+    logEvent(EVENTS.PRODUCT_VIEW, {
+      productId: product.id,
+      name: product.name,
+      category: product.category,
+      price: product.price,
+    });
+  }
+
   return (
     <div className="min-h-screen flex flex-col relative">
       {/* ================= FLOATING CART BUTTON ================= */}
       <button
         onClick={() => setOpen(true)}
         className="
-          fixed 
-          bottom-6 
-          right-6 
-          z-50
-          w-14 
-          h-14
-          rounded-full 
-          bg-mauve 
-          text-white
-          flex 
-          items-center 
-          justify-center
-          shadow-xl
-          hover:scale-105
-          active:scale-95
-          transition
+          fixed bottom-6 right-6 z-50
+          w-14 h-14 rounded-full bg-mauve text-white
+          flex items-center justify-center shadow-xl
+          hover:scale-105 active:scale-95 transition
         "
       >
         <FaShoppingBag size={20} />
@@ -192,18 +188,8 @@ export default function Shop() {
         {items.length > 0 && (
           <span
             className="
-              absolute 
-              -top-1 
-              -right-1
-              bg-black 
-              text-white 
-              text-xs
-              w-5 
-              h-5
-              rounded-full
-              flex 
-              items-center 
-              justify-center
+              absolute -top-1 -right-1 bg-black text-white text-xs
+              w-5 h-5 rounded-full flex items-center justify-center
             "
           >
             {items.length}
@@ -324,7 +310,7 @@ export default function Shop() {
                 key={product.id}
                 product={{ ...product, image: product.imageUrl }}
                 onAdd={() => handleAddToCart(product)}
-                onPreview={() => setPreviewProduct(product)}
+                onPreview={() => handlePreview(product)}
               />
             ))}
           </section>

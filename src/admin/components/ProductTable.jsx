@@ -4,6 +4,7 @@ import Loader from "../../components/Loader";
 import Pagination from "../../components/Pagination";
 
 const ITEMS_PER_PAGE = 8;
+const MIN_LOADING_TIME = 600; // 👈 milliseconds (feel free to tweak)
 
 export default function ProductTable({
   products = [],
@@ -12,16 +13,33 @@ export default function ProductTable({
   onDelete,
 }) {
   const [page, setPage] = useState(1);
+  const [showLoader, setShowLoader] = useState(true);
 
   /* ================= RESET PAGE ON DATA CHANGE ================= */
   useEffect(() => {
     setPage(1);
   }, [products.length]);
 
+  /* ================= FORCE MINIMUM LOADER DISPLAY ================= */
+  useEffect(() => {
+    let timer;
+
+    if (loading) {
+      setShowLoader(true);
+    } else {
+      // Keep loader visible slightly to avoid flicker
+      timer = setTimeout(() => {
+        setShowLoader(false);
+      }, MIN_LOADING_TIME);
+    }
+
+    return () => clearTimeout(timer);
+  }, [loading]);
+
   /* ================= LOADING ================= */
-  if (loading) {
+  if (showLoader) {
     return (
-      <div className="mt-10 flex justify-center py-20">
+      <div className="mt-10 min-h-[280px] flex items-center justify-center">
         <Loader />
       </div>
     );
@@ -30,14 +48,18 @@ export default function ProductTable({
   /* ================= EMPTY ================= */
   if (!products.length) {
     return (
-      <p className="text-center opacity-60 py-16">
-        No products yet.
-      </p>
+      <div className="mt-10 min-h-[240px] flex items-center justify-center">
+        <p className="text-center opacity-60">
+          No products yet.
+        </p>
+      </div>
     );
   }
 
   /* ================= PAGINATION ================= */
-  const totalPages = Math.ceil(products.length / ITEMS_PER_PAGE);
+  const totalPages = Math.ceil(
+    products.length / ITEMS_PER_PAGE
+  );
 
   const paginatedProducts = products.slice(
     (page - 1) * ITEMS_PER_PAGE,

@@ -7,6 +7,10 @@ import gsap from "gsap";
 import { supabase } from "../lib/supabase";
 import Loader from "../components/Loader";
 
+// ✅ Analytics
+import { EVENTS } from "../analytics/analyticsEvents";
+import { logEvent } from "../analytics/analyticsClient";
+
 /* ================= FEATURED PRODUCT NAMES ================= */
 const FEATURED_PRODUCT_NAMES = [
   "Forever Arctic Sea",
@@ -20,6 +24,13 @@ export default function Home() {
 
   const [products, setProducts] = useState([]);
   const [ready, setReady] = useState(false);
+
+  /* ================= USER VISIT ANALYTICS ================= */
+  useEffect(() => {
+    logEvent(EVENTS.USER_VISIT, {
+      page: window.location.pathname,
+    });
+  }, []);
 
   /* ================= FETCH FEATURED PRODUCTS ================= */
   useEffect(() => {

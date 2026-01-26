@@ -1,38 +1,63 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "../lib/supabase";
 import { useNavigate } from "react-router-dom";
 import BackButton from "../components/BackButton";
 
+// ✅ Analytics
+import { EVENTS } from "../analytics/analyticsEvents";
+import { logEvent } from "../analytics/analyticsClient";
+
 export default function Login() {
   const navigate = useNavigate();
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [user, setUser] = useState(null);
 
+  /* ================= TRACK LOGIN AFTER AUTH ================= */
+  useEffect(() => {
+    if (!user) return;
+
+    console.log("🔐 Admin logged in:", user.email);
+
+    logEvent(
+      EVENTS.ADMIN_LOGIN,
+      { email: user.email },
+      user.id
+    );
+
+    navigate("/admin/products");
+  }, [user, navigate]);
+
+  /* ================= HANDLE LOGIN ================= */
   const handleLogin = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
 
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    const { data, error } =
+      await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
 
     if (error) {
       setError(error.message);
-    } else {
-      navigate("/admin/products"); // ✅ FIX
+      setLoading(false);
+      return;
     }
 
+    // ✅ Trigger analytics via effect
+    setUser(data.user);
     setLoading(false);
   };
 
   return (
     <div className="app-container bg-milk">
       <div className="max-w-6xl mx-auto px-6 pt-8">
-          <BackButton to="/shop" />
+        <BackButton to="/shop" />
       </div>
 
       <div className="flex items-center justify-center mt-24">

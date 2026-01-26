@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../../lib/supabase";
 
-import BackButton from "../../components/BackButton";
+import AdminHeader from "../components/AdminHeader";
 import ProductForm from "../components/ProductForm";
 import ProductTable from "../components/ProductTable";
 import { useAdminProducts } from "../hooks/useAdminProducts";
@@ -34,17 +34,8 @@ export default function AdminProducts() {
 
   return (
     <div className="p-4 sm:p-6 max-w-6xl mx-auto overflow-x-hidden">
-      {/* TOP BAR */}
-      <div className="flex items-center justify-between gap-4 mb-6">
-        <BackButton to="/shop" />
-
-        <button
-          onClick={handleLogout}
-          className="px-4 py-2 rounded bg-pink-500 text-white shrink-0"
-        >
-          Logout
-        </button>
-      </div>
+      {/* ✅ HEADER (Back + Analytics + Logout) */}
+      <AdminHeader onLogout={handleLogout} />
 
       {/* ADD PRODUCT */}
       <ProductForm
