@@ -6,8 +6,9 @@ import { supabase } from "../lib/supabase";
 import { payWithPaystack } from "../lib/paystack";
 
 /* ================= DELIVERY CONFIG ================= */
-const BASE_DELIVERY_FEE = 3000;
-const MAX_DELIVERY_FEE = 5000;
+const BASE_DELIVERY_FEE = 100; // Starts at ₦100 (can increase later)
+
+/* =================================================== */
 
 export default function CartModal() {
   const {
@@ -33,40 +34,31 @@ export default function CartModal() {
 
   const [errors, setErrors] = useState({});
 
-  /* ================= TOTAL CALC ================= */
+  /* ================= TOTAL ================= */
   const deliveryFee = BASE_DELIVERY_FEE;
 
   const grandTotal = useMemo(() => {
     return total + deliveryFee;
-  }, [total]);
+  }, [total, deliveryFee]);
 
   /* ================= HARD SCROLL LOCK ================= */
   useEffect(() => {
     if (open) {
       scrollYRef.current = window.scrollY;
-
       document.body.style.position = "fixed";
       document.body.style.top = `-${scrollYRef.current}px`;
-      document.body.style.left = "0";
-      document.body.style.right = "0";
       document.body.style.width = "100%";
     } else {
       const y = scrollYRef.current;
-
       document.body.style.position = "";
       document.body.style.top = "";
-      document.body.style.left = "";
-      document.body.style.right = "";
       document.body.style.width = "";
-
       window.scrollTo(0, y);
     }
 
     return () => {
       document.body.style.position = "";
       document.body.style.top = "";
-      document.body.style.left = "";
-      document.body.style.right = "";
       document.body.style.width = "";
     };
   }, [open]);
@@ -111,7 +103,38 @@ export default function CartModal() {
     return Object.keys(newErrors).length === 0;
   };
 
-  /* ================= PAYSTACK SUBMIT ================= */
+  /* ================= SEND EMAIL ================= */
+  async function sendOrderEmail(order) {
+    try {
+      const res = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-order-email`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
+            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          },
+          body: JSON.stringify({ order }),
+        }
+      );
+
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(text);
+      }
+
+      const data = await res.json();
+      console.log("📧 Email sent:", data);
+      return true;
+    } catch (err) {
+      console.error("❌ Email failed:", err);
+      alert("❌ Order email failed. Please contact support.");
+      return false;
+    }
+  }
+
+  /* ================= PAYSTACK ================= */
   const submitPaystack = () => {
     if (submitting) return;
     if (!validateForm()) return;
@@ -140,7 +163,7 @@ export default function CartModal() {
         ],
       },
 
-      /* ✅ PAYMENT SUCCESS */
+      /* ✅ SUCCESS */
       onSuccess: async (response) => {
         try {
           const order = {
@@ -155,15 +178,23 @@ export default function CartModal() {
             reference: response.reference,
           };
 
+          // 🔥 Save order
           const { error } = await supabase
             .from("orders")
             .insert(order);
 
           if (error) {
             console.error("❌ Order save failed:", error);
-            alert("Payment succeeded but order failed to save.");
+            alert("⚠️ Payment succeeded but order failed to save.");
+          }
+
+          // 📧 Always attempt email
+          const emailOk = await sendOrderEmail(order);
+
+          if (!emailOk) {
+            alert("⚠️ Payment successful but email failed.");
           } else {
-            alert("✅ Payment successful! Your order has been received.");
+            alert("✅ Payment successful! Confirmation email sent.");
           }
 
           clearCart();
@@ -172,15 +203,14 @@ export default function CartModal() {
           setErrors({});
         } catch (err) {
           console.error("❌ Order handling error:", err);
-          alert("Order save failed after payment.");
+          alert("Order failed after payment.");
         } finally {
           setSubmitting(false);
         }
       },
 
-      /* ❌ PAYMENT CLOSED */
+      /* ❌ CLOSED */
       onClose: () => {
-        console.log("❌ Payment popup closed");
         setSubmitting(false);
       },
     });
@@ -191,20 +221,9 @@ export default function CartModal() {
       className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center bg-black/30 backdrop-blur-sm"
       onClick={() => setOpen(false)}
     >
-      {/* MODAL */}
       <div
         onClick={(e) => e.stopPropagation()}
-        className="
-          w-full 
-          sm:max-w-md
-          bg-milk
-          rounded-t-3xl 
-          sm:rounded-3xl
-          p-6
-          max-h-[90vh]
-          overflow-y-auto
-          shadow-xl
-        "
+        className="w-full sm:max-w-md bg-milk rounded-t-3xl sm:rounded-3xl p-6 max-h-[90vh] overflow-y-auto shadow-xl"
       >
         {/* HEADER */}
         <div className="sticky top-0 bg-milk pb-4 flex justify-between items-center z-10">
@@ -216,9 +235,7 @@ export default function CartModal() {
 
         {/* EMPTY */}
         {items.length === 0 ? (
-          <p className="text-center opacity-70 py-10">
-            Cart is empty
-          </p>
+          <p className="text-center opacity-70 py-10">Cart is empty</p>
         ) : (
           <>
             {/* ITEMS */}
@@ -248,20 +265,21 @@ export default function CartModal() {
               ))}
             </div>
 
-            {/* PRICE BREAKDOWN */}
-            <div className="bg-peach/30 rounded-xl p-3 mb-4 space-y-1 text-sm">
+            {/* PRICE */}
+            <div className="bg-peach/30 rounded-xl p-3 mb-4 text-sm space-y-1">
               <div className="flex justify-between">
                 <span>Subtotal</span>
                 <span>₦{total.toLocaleString()}</span>
               </div>
 
               <div className="flex justify-between">
-                <span>Delivery Fee</span>
+                <span>Delivery</span>
                 <span>₦{deliveryFee.toLocaleString()}</span>
               </div>
 
+              {/* ✅ Delivery notice */}
               <p className="text-xs text-gray-600 mt-1">
-                Delivery fee starts at ₦3,000 and may increase up to ₦5,000
+                Delivery fee starts at ₦100 and may increase up to ₦5,000
                 depending on your location.
               </p>
 
@@ -271,15 +289,14 @@ export default function CartModal() {
               </div>
             </div>
 
-            {/* CLEAR CART */}
+            {/* CLEAR */}
             <button
-              onClick={(e) => {
-                e.stopPropagation();
+              onClick={() => {
                 clearCart();
                 setShowPaystackForm(false);
                 setErrors({});
               }}
-              className="w-full mb-4 py-2 rounded-full text-sm border border-red-300 text-red-600 hover:bg-red-50 cursor-pointer"
+              className="w-full mb-4 py-2 rounded-full text-sm border border-red-300 text-red-600 hover:bg-red-50"
             >
               Clear Cart
             </button>
@@ -288,7 +305,6 @@ export default function CartModal() {
             {showPaystackForm ? (
               <div className="space-y-3 pb-4">
                 <input
-                  type="text"
                   placeholder="Full Name"
                   value={form.name}
                   onChange={(e) =>
@@ -296,12 +312,8 @@ export default function CartModal() {
                   }
                   className="w-full px-4 py-2 rounded-xl border"
                 />
-                {errors.name && (
-                  <p className="text-xs text-red-600">{errors.name}</p>
-                )}
 
                 <input
-                  type="email"
                   placeholder="Email"
                   value={form.email}
                   onChange={(e) =>
@@ -309,12 +321,8 @@ export default function CartModal() {
                   }
                   className="w-full px-4 py-2 rounded-xl border"
                 />
-                {errors.email && (
-                  <p className="text-xs text-red-600">{errors.email}</p>
-                )}
 
                 <input
-                  type="tel"
                   placeholder="Phone Number"
                   value={form.phone}
                   onChange={(e) =>
@@ -322,9 +330,6 @@ export default function CartModal() {
                   }
                   className="w-full px-4 py-2 rounded-xl border"
                 />
-                {errors.phone && (
-                  <p className="text-xs text-red-600">{errors.phone}</p>
-                )}
 
                 <textarea
                   placeholder="Delivery Address"
@@ -335,17 +340,11 @@ export default function CartModal() {
                   className="w-full px-4 py-2 rounded-xl border resize-none"
                   rows={3}
                 />
-                {errors.address && (
-                  <p className="text-xs text-red-600">
-                    {errors.address}
-                  </p>
-                )}
 
                 <button
-                  type="button"
                   disabled={submitting}
                   onClick={submitPaystack}
-                  className="w-full py-3 rounded-full bg-black text-white text-sm disabled:opacity-50"
+                  className="w-full py-3 rounded-full bg-black text-white disabled:opacity-50"
                 >
                   {submitting
                     ? "Processing..."
@@ -353,10 +352,7 @@ export default function CartModal() {
                 </button>
 
                 <button
-                  onClick={() => {
-                    setShowPaystackForm(false);
-                    setErrors({});
-                  }}
+                  onClick={() => setShowPaystackForm(false)}
                   className="w-full text-sm opacity-70"
                 >
                   Cancel
@@ -366,14 +362,14 @@ export default function CartModal() {
               <div className="space-y-3 pb-4">
                 <button
                   onClick={checkoutWhatsApp}
-                  className="w-full py-3 rounded-full bg-mauve text-white text-sm"
+                  className="w-full py-3 rounded-full bg-mauve text-white"
                 >
                   Checkout via WhatsApp · ₦{grandTotal.toLocaleString()}
                 </button>
 
                 <button
                   onClick={() => setShowPaystackForm(true)}
-                  className="w-full py-3 rounded-full bg-black text-white text-sm"
+                  className="w-full py-3 rounded-full bg-black text-white"
                 >
                   Checkout via Paystack
                 </button>
