@@ -1,9 +1,9 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { FaTimes, FaTrash } from "react-icons/fa";
 import { useCart } from "../context/CartContext";
 import { getWhatsAppLink } from "../../lib/whatsapp";
 import { supabase } from "../lib/supabase";
-import { payWithPaystack } from "../lib/paystack";
+import { payWithPaystack } from "../lib/paystack"; // ✅ USE HELPER
 
 export default function CartModal() {
   const {
@@ -25,7 +25,7 @@ export default function CartModal() {
     address: "",
   });
 
-  const [errors, setErrors] = useState({});
+  const [errors, setErrors] = useState({}); // ✅ validation errors
 
   /* ================= LOCK BODY SCROLL WHEN OPEN ================= */
   useEffect(() => {
@@ -41,45 +41,6 @@ export default function CartModal() {
   }, [open]);
 
   if (!open) return null;
-
-  /* ================= VALIDATION ================= */
-  const validate = () => {
-    const nextErrors = {};
-
-    if (!form.name || form.name.trim().length < 2) {
-      nextErrors.name = "Please enter your full name";
-    }
-
-    if (
-      !form.email ||
-      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)
-    ) {
-      nextErrors.email = "Please enter a valid email address";
-    }
-
-    if (
-      !form.phone ||
-      form.phone.replace(/\D/g, "").length < 10
-    ) {
-      nextErrors.phone = "Please enter a valid phone number";
-    }
-
-    if (!form.address || form.address.trim().length < 5) {
-      nextErrors.address = "Please enter your delivery address";
-    }
-
-    setErrors(nextErrors);
-    return Object.keys(nextErrors).length === 0;
-  };
-
-  const isFormValid = useMemo(() => {
-    return (
-      form.name.trim().length >= 2 &&
-      /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email) &&
-      form.phone.replace(/\D/g, "").length >= 10 &&
-      form.address.trim().length >= 5
-    );
-  }, [form]);
 
   /* ================= WHATSAPP CHECKOUT ================= */
   const checkoutWhatsApp = () => {
@@ -98,24 +59,47 @@ export default function CartModal() {
     window.open(link, "_blank");
   };
 
+  /* ================= FORM VALIDATION ================= */
+  const validateForm = () => {
+    const newErrors = {};
+
+    if (!form.name.trim()) newErrors.name = "Full name is required";
+    if (!form.phone.trim()) newErrors.phone = "Phone number is required";
+    if (!form.address.trim())
+      newErrors.address = "Delivery address is required";
+
+    if (!form.email.trim()) {
+      newErrors.email = "Email is required";
+    } else if (
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())
+    ) {
+      newErrors.email = "Enter a valid email address";
+    }
+
+    setErrors(newErrors);
+
+    return Object.keys(newErrors).length === 0;
+  };
+
   /* ================= PAYSTACK SUBMIT ================= */
   const submitPaystack = () => {
     if (submitting) return;
 
-    const valid = validate();
-    if (!valid) return;
+    if (!validateForm()) return; // ✅ block invalid submit
+
+    const { name, email, phone, address } = form;
 
     setSubmitting(true);
 
     payWithPaystack({
       amount: total,
-      email: form.email,
+      email: email.trim(),
 
       metadata: {
         custom_fields: [
-          { display_name: "Name", value: form.name },
-          { display_name: "Phone", value: form.phone },
-          { display_name: "Address", value: form.address },
+          { display_name: "Name", value: name },
+          { display_name: "Phone", value: phone },
+          { display_name: "Address", value: address },
           {
             display_name: "Items",
             value: items.map((i) => `${i.name} x${i.qty}`).join(", "),
@@ -127,10 +111,10 @@ export default function CartModal() {
       onSuccess: async (response) => {
         try {
           const order = {
-            name: form.name,
-            email: form.email,
-            phone: form.phone,
-            address: form.address,
+            name,
+            email,
+            phone,
+            address,
             items,
             amount: total,
             reference: response.reference,
@@ -150,6 +134,7 @@ export default function CartModal() {
           clearCart();
           setShowPaystackForm(false);
           setOpen(false);
+          setErrors({});
         } catch (err) {
           console.error("❌ Order handling error:", err);
           alert("Order save failed after payment.");
@@ -234,6 +219,7 @@ export default function CartModal() {
                 e.stopPropagation();
                 clearCart();
                 setShowPaystackForm(false);
+                setErrors({});
               }}
               className="w-full mb-4 py-2 rounded-full text-sm border border-red-300 text-red-600 hover:bg-red-50 cursor-pointer"
             >
@@ -244,82 +230,68 @@ export default function CartModal() {
             {showPaystackForm ? (
               <div className="space-y-3 pb-4">
                 {/* NAME */}
-                <div>
-                  <input
-                    type="text"
-                    placeholder="Full Name"
-                    value={form.name}
-                    onChange={(e) =>
-                      setForm({ ...form, name: e.target.value })
-                    }
-                    className="w-full px-4 py-2 rounded-xl border"
-                  />
-                  {errors.name && (
-                    <p className="text-xs text-red-500 mt-1">
-                      {errors.name}
-                    </p>
-                  )}
-                </div>
+                <input
+                  type="text"
+                  placeholder="Full Name"
+                  value={form.name}
+                  onChange={(e) =>
+                    setForm({ ...form, name: e.target.value })
+                  }
+                  className="w-full px-4 py-2 rounded-xl border"
+                />
+                {errors.name && (
+                  <p className="text-xs text-red-600">{errors.name}</p>
+                )}
 
                 {/* EMAIL */}
-                <div>
-                  <input
-                    type="email"
-                    placeholder="Email"
-                    value={form.email}
-                    onChange={(e) =>
-                      setForm({ ...form, email: e.target.value })
-                    }
-                    className="w-full px-4 py-2 rounded-xl border"
-                  />
-                  {errors.email && (
-                    <p className="text-xs text-red-500 mt-1">
-                      {errors.email}
-                    </p>
-                  )}
-                </div>
+                <input
+                  type="email"
+                  placeholder="Email"
+                  value={form.email}
+                  onChange={(e) =>
+                    setForm({ ...form, email: e.target.value })
+                  }
+                  className="w-full px-4 py-2 rounded-xl border"
+                />
+                {errors.email && (
+                  <p className="text-xs text-red-600">{errors.email}</p>
+                )}
 
                 {/* PHONE */}
-                <div>
-                  <input
-                    type="tel"
-                    placeholder="Phone Number"
-                    value={form.phone}
-                    onChange={(e) =>
-                      setForm({ ...form, phone: e.target.value })
-                    }
-                    className="w-full px-4 py-2 rounded-xl border"
-                  />
-                  {errors.phone && (
-                    <p className="text-xs text-red-500 mt-1">
-                      {errors.phone}
-                    </p>
-                  )}
-                </div>
+                <input
+                  type="tel"
+                  placeholder="Phone Number"
+                  value={form.phone}
+                  onChange={(e) =>
+                    setForm({ ...form, phone: e.target.value })
+                  }
+                  className="w-full px-4 py-2 rounded-xl border"
+                />
+                {errors.phone && (
+                  <p className="text-xs text-red-600">{errors.phone}</p>
+                )}
 
                 {/* ADDRESS */}
-                <div>
-                  <textarea
-                    placeholder="Delivery Address"
-                    value={form.address}
-                    onChange={(e) =>
-                      setForm({ ...form, address: e.target.value })
-                    }
-                    className="w-full px-4 py-2 rounded-xl border resize-none"
-                    rows={3}
-                  />
-                  {errors.address && (
-                    <p className="text-xs text-red-500 mt-1">
-                      {errors.address}
-                    </p>
-                  )}
-                </div>
+                <textarea
+                  placeholder="Delivery Address"
+                  value={form.address}
+                  onChange={(e) =>
+                    setForm({ ...form, address: e.target.value })
+                  }
+                  className="w-full px-4 py-2 rounded-xl border resize-none"
+                  rows={3}
+                />
+                {errors.address && (
+                  <p className="text-xs text-red-600">
+                    {errors.address}
+                  </p>
+                )}
 
                 <button
                   type="button"
-                  disabled={!isFormValid || submitting}
+                  disabled={submitting}
                   onClick={submitPaystack}
-                  className="w-full py-3 rounded-full bg-black text-white text-sm disabled:opacity-40"
+                  className="w-full py-3 rounded-full bg-black text-white text-sm disabled:opacity-50"
                 >
                   {submitting
                     ? "Processing..."
@@ -327,7 +299,10 @@ export default function CartModal() {
                 </button>
 
                 <button
-                  onClick={() => setShowPaystackForm(false)}
+                  onClick={() => {
+                    setShowPaystackForm(false);
+                    setErrors({});
+                  }}
                   className="w-full text-sm opacity-70"
                 >
                   Cancel
