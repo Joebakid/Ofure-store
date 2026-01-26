@@ -1,8 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { FaTimes, FaTrash } from "react-icons/fa";
 import { useCart } from "../context/CartContext";
 import { getWhatsAppLink } from "../../lib/whatsapp";
 import { supabase } from "../lib/supabase";
+import { payWithPaystack } from "../lib/paystack";
 
 export default function CartModal() {
   const {
@@ -16,12 +17,15 @@ export default function CartModal() {
 
   const [showPaystackForm, setShowPaystackForm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+
   const [form, setForm] = useState({
     name: "",
     email: "",
     phone: "",
     address: "",
   });
+
+  const [errors, setErrors] = useState({});
 
   /* ================= LOCK BODY SCROLL WHEN OPEN ================= */
   useEffect(() => {
@@ -38,9 +42,48 @@ export default function CartModal() {
 
   if (!open) return null;
 
+  /* ================= VALIDATION ================= */
+  const validate = () => {
+    const nextErrors = {};
+
+    if (!form.name || form.name.trim().length < 2) {
+      nextErrors.name = "Please enter your full name";
+    }
+
+    if (
+      !form.email ||
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)
+    ) {
+      nextErrors.email = "Please enter a valid email address";
+    }
+
+    if (
+      !form.phone ||
+      form.phone.replace(/\D/g, "").length < 10
+    ) {
+      nextErrors.phone = "Please enter a valid phone number";
+    }
+
+    if (!form.address || form.address.trim().length < 5) {
+      nextErrors.address = "Please enter your delivery address";
+    }
+
+    setErrors(nextErrors);
+    return Object.keys(nextErrors).length === 0;
+  };
+
+  const isFormValid = useMemo(() => {
+    return (
+      form.name.trim().length >= 2 &&
+      /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email) &&
+      form.phone.replace(/\D/g, "").length >= 10 &&
+      form.address.trim().length >= 5
+    );
+  }, [form]);
+
   /* ================= WHATSAPP CHECKOUT ================= */
   const checkoutWhatsApp = () => {
-    if (items.length === 0) return;
+    if (!items.length) return;
 
     const message = items
       .map((i) => `${i.name} x${i.qty}`)
@@ -59,26 +102,20 @@ export default function CartModal() {
   const submitPaystack = () => {
     if (submitting) return;
 
-    const { name, email, phone, address } = form;
-
-    if (!name || !email || !phone || !address) {
-      alert("Please fill all fields");
-      return;
-    }
+    const valid = validate();
+    if (!valid) return;
 
     setSubmitting(true);
 
-    const handler = window.PaystackPop.setup({
-      key: import.meta.env.VITE_PAYSTACK_PUBLIC_KEY,
-      email,
-      amount: total * 100,
-      currency: "NGN",
-      ref: `LOL-${Date.now()}`,
+    payWithPaystack({
+      amount: total,
+      email: form.email,
+
       metadata: {
         custom_fields: [
-          { display_name: "Name", value: name },
-          { display_name: "Phone", value: phone },
-          { display_name: "Address", value: address },
+          { display_name: "Name", value: form.name },
+          { display_name: "Phone", value: form.phone },
+          { display_name: "Address", value: form.address },
           {
             display_name: "Items",
             value: items.map((i) => `${i.name} x${i.qty}`).join(", "),
@@ -86,13 +123,14 @@ export default function CartModal() {
         ],
       },
 
-      callback: async function (response) {
+      /* ✅ PAYMENT SUCCESS */
+      onSuccess: async (response) => {
         try {
           const order = {
-            name,
-            email,
-            phone,
-            address,
+            name: form.name,
+            email: form.email,
+            phone: form.phone,
+            address: form.address,
             items,
             amount: total,
             reference: response.reference,
@@ -104,9 +142,7 @@ export default function CartModal() {
 
           if (error) {
             console.error("❌ Order save failed:", error);
-            alert(
-              "Payment succeeded but order failed to save. Please contact support."
-            );
+            alert("Payment succeeded but order failed to save.");
           } else {
             alert("✅ Payment successful! Your order has been received.");
           }
@@ -115,20 +151,19 @@ export default function CartModal() {
           setShowPaystackForm(false);
           setOpen(false);
         } catch (err) {
-          console.error("❌ Unexpected error:", err);
-          alert("Something went wrong. Please refresh and try again.");
+          console.error("❌ Order handling error:", err);
+          alert("Order save failed after payment.");
         } finally {
           setSubmitting(false);
         }
       },
 
-      onClose: function () {
-        console.log("Payment window closed");
+      /* ❌ PAYMENT CLOSED */
+      onClose: () => {
+        console.log("❌ Payment popup closed");
         setSubmitting(false);
       },
     });
-
-    handler.openIframe();
   };
 
   return (
@@ -208,50 +243,83 @@ export default function CartModal() {
             {/* PAYSTACK FORM */}
             {showPaystackForm ? (
               <div className="space-y-3 pb-4">
-                <input
-                  type="text"
-                  placeholder="Full Name"
-                  value={form.name}
-                  onChange={(e) =>
-                    setForm({ ...form, name: e.target.value })
-                  }
-                  className="w-full px-4 py-2 rounded-xl border"
-                />
+                {/* NAME */}
+                <div>
+                  <input
+                    type="text"
+                    placeholder="Full Name"
+                    value={form.name}
+                    onChange={(e) =>
+                      setForm({ ...form, name: e.target.value })
+                    }
+                    className="w-full px-4 py-2 rounded-xl border"
+                  />
+                  {errors.name && (
+                    <p className="text-xs text-red-500 mt-1">
+                      {errors.name}
+                    </p>
+                  )}
+                </div>
 
-                <input
-                  type="email"
-                  placeholder="Email"
-                  value={form.email}
-                  onChange={(e) =>
-                    setForm({ ...form, email: e.target.value })
-                  }
-                  className="w-full px-4 py-2 rounded-xl border"
-                />
+                {/* EMAIL */}
+                <div>
+                  <input
+                    type="email"
+                    placeholder="Email"
+                    value={form.email}
+                    onChange={(e) =>
+                      setForm({ ...form, email: e.target.value })
+                    }
+                    className="w-full px-4 py-2 rounded-xl border"
+                  />
+                  {errors.email && (
+                    <p className="text-xs text-red-500 mt-1">
+                      {errors.email}
+                    </p>
+                  )}
+                </div>
 
-                <input
-                  type="tel"
-                  placeholder="Phone Number"
-                  value={form.phone}
-                  onChange={(e) =>
-                    setForm({ ...form, phone: e.target.value })
-                  }
-                  className="w-full px-4 py-2 rounded-xl border"
-                />
+                {/* PHONE */}
+                <div>
+                  <input
+                    type="tel"
+                    placeholder="Phone Number"
+                    value={form.phone}
+                    onChange={(e) =>
+                      setForm({ ...form, phone: e.target.value })
+                    }
+                    className="w-full px-4 py-2 rounded-xl border"
+                  />
+                  {errors.phone && (
+                    <p className="text-xs text-red-500 mt-1">
+                      {errors.phone}
+                    </p>
+                  )}
+                </div>
 
-                <textarea
-                  placeholder="Delivery Address"
-                  value={form.address}
-                  onChange={(e) =>
-                    setForm({ ...form, address: e.target.value })
-                  }
-                  className="w-full px-4 py-2 rounded-xl border resize-none"
-                  rows={3}
-                />
+                {/* ADDRESS */}
+                <div>
+                  <textarea
+                    placeholder="Delivery Address"
+                    value={form.address}
+                    onChange={(e) =>
+                      setForm({ ...form, address: e.target.value })
+                    }
+                    className="w-full px-4 py-2 rounded-xl border resize-none"
+                    rows={3}
+                  />
+                  {errors.address && (
+                    <p className="text-xs text-red-500 mt-1">
+                      {errors.address}
+                    </p>
+                  )}
+                </div>
 
                 <button
-                  disabled={submitting}
+                  type="button"
+                  disabled={!isFormValid || submitting}
                   onClick={submitPaystack}
-                  className="w-full py-3 rounded-full bg-black text-white text-sm disabled:opacity-50"
+                  className="w-full py-3 rounded-full bg-black text-white text-sm disabled:opacity-40"
                 >
                   {submitting
                     ? "Processing..."
