@@ -283,7 +283,7 @@ export default function CartModal() {
 
               {/* ✅ Delivery notice */}
               <p className="text-xs text-gray-600 mt-1">
-                Delivery fee starts at ₦100 and may increase up to ₦5,000
+                Delivery fee starts at ₦3000 and may increase up to ₦5,000
                 depending on your location.
               </p>
 
