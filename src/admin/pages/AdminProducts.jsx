@@ -15,7 +15,6 @@ export default function AdminProducts() {
 
   const { admin, loading: adminLoading } = useAdmin();
 
-  // ✅ admin passed into hook
   const {
     products,
     loading,
@@ -61,7 +60,7 @@ export default function AdminProducts() {
         loading={loading}
         onUpdate={updateProduct}
         onDelete={deleteProduct}
-        canDelete={isOwner}    
+        canDelete={isOwner}
       />
     </div>
   );

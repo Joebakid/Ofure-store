@@ -11,7 +11,7 @@ export default function ProductTable({
   loading,
   onUpdate,
   onDelete,
-  isOwner, // ✅ NEW
+  canDelete, // ✅ USE canDelete (not isOwner)
 }) {
   const [page, setPage] = useState(1);
   const [showLoader, setShowLoader] = useState(true);
@@ -57,9 +57,7 @@ export default function ProductTable({
   }
 
   /* ================= PAGINATION ================= */
-  const totalPages = Math.ceil(
-    products.length / ITEMS_PER_PAGE
-  );
+  const totalPages = Math.ceil(products.length / ITEMS_PER_PAGE);
 
   const paginatedProducts = products.slice(
     (page - 1) * ITEMS_PER_PAGE,
@@ -76,7 +74,8 @@ export default function ProductTable({
             product={product}
             onUpdate={onUpdate}
             onDelete={onDelete}
-            canDelete={isOwner} // ✅ OWNER ONLY
+            loading={loading}
+            canDelete={canDelete} // ✅ NOW WIRED CORRECTLY
           />
         ))}
       </div>
