@@ -8,6 +8,7 @@ export default function ProductRow({
   onUpdate,
   onDelete,
   loading,
+  canDelete,
 }) {
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -44,11 +45,23 @@ export default function ProductRow({
   }
 
   async function handleDelete() {
+    if (!canDelete) {
+      alert("Owner approval required");
+      return;
+    }
+
     if (!window.confirm("Delete this product?")) return;
 
     setDeleting(true);
-    await onDelete(product.id, product.image);
-    setDeleted(true);
+
+    // ✅ only mark deleted if DB deletion succeeds
+    const success = await onDelete(product.id, product.image);
+
+    if (success) {
+      setDeleted(true);
+    }
+
+    setDeleting(false);
   }
 
   return (
@@ -71,6 +84,7 @@ export default function ProductRow({
             <img
               src={data.publicUrl}
               className="w-full h-full object-cover rounded-lg"
+              alt={product.name}
             />
           )}
         </div>
@@ -78,9 +92,17 @@ export default function ProductRow({
         <div className="flex-1 space-y-2">
           {editing ? (
             <>
-              <input className="input" value={name} onChange={(e) => setName(e.target.value)} />
-              <input className="input" type="number" value={price} onChange={(e) => setPrice(e.target.value)} />
-
+              <input
+                className="input"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+              />
+              <input
+                className="input"
+                type="number"
+                value={price}
+                onChange={(e) => setPrice(e.target.value)}
+              />
               <select
                 className="input"
                 value={category}
@@ -90,7 +112,6 @@ export default function ProductRow({
                   <option key={c}>{c}</option>
                 ))}
               </select>
-
               <input
                 ref={fileRef}
                 type="file"
@@ -110,16 +131,34 @@ export default function ProductRow({
           )}
         </div>
 
-        <div className="flex gap-3">
+        <div className="flex gap-3 items-start">
           {editing ? (
             <>
-              <button onClick={handleSave} className="text-green-600">Save</button>
-              <button onClick={() => setEditing(false)}>Cancel</button>
+              <button onClick={handleSave} className="text-green-600">
+                Save
+              </button>
+              <button onClick={() => setEditing(false)}>
+                Cancel
+              </button>
             </>
           ) : (
             <>
-              <button onClick={() => setEditing(true)} className="text-blue-500">Edit</button>
-              <button onClick={handleDelete} className="text-red-500">Delete</button>
+              <button
+                onClick={() => setEditing(true)}
+                className="text-blue-500"
+              >
+                Edit
+              </button>
+
+              <button
+                onClick={handleDelete}
+                disabled={!canDelete}
+                className={`text-red-500 ${
+                  !canDelete ? "opacity-40 cursor-not-allowed" : ""
+                }`}
+              >
+                Delete
+              </button>
             </>
           )}
         </div>

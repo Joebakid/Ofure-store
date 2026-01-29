@@ -6,14 +6,12 @@ import { normalizeImagePath } from "../utils/normalizeImagePath";
 import { EVENTS } from "../../analytics/analyticsEvents";
 import { logEvent } from "../../analytics/analyticsClient";
 
-export function useAdminProducts() {
+export function useAdminProducts(admin) {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(false);
 
   /* ================= FETCH ================= */
   async function fetchProducts() {
-    console.log("📦 fetchProducts");
-
     const { data, error } = await supabase
       .from("products")
       .select("*")
@@ -34,7 +32,6 @@ export function useAdminProducts() {
 
   /* ================= CREATE ================= */
   async function createProduct(payload) {
-    console.log("🟢 createProduct", payload);
     setLoading(true);
 
     let imagePath = null;
@@ -48,7 +45,6 @@ export function useAdminProducts() {
         .upload(imagePath, payload.imageFile);
 
       if (error) {
-        console.error("❌ upload error", error);
         setLoading(false);
         return;
       }
@@ -66,22 +62,14 @@ export function useAdminProducts() {
       .select()
       .single();
 
-    if (error) {
-      console.error("❌ insert error", error);
-    } else {
-      // ✅ Track product creation with email + admin id
+    if (!error && inserted) {
       const {
         data: { user },
       } = await supabase.auth.getUser();
 
       logEvent(
         EVENTS.PRODUCT_CREATE,
-        {
-          name: inserted.name,
-          price: inserted.price,
-          category: inserted.category,
-          email: user?.email,
-        },
+        { name: inserted.name, email: user?.email },
         user?.id
       );
     }
@@ -92,7 +80,6 @@ export function useAdminProducts() {
 
   /* ================= UPDATE ================= */
   async function updateProduct(id, updates, imageFile) {
-    console.log("✏️ updateProduct", id, updates);
     setLoading(true);
 
     let imagePath = updates.image;
@@ -106,33 +93,78 @@ export function useAdminProducts() {
         .upload(imagePath, imageFile);
 
       if (error) {
-        console.error("❌ image update error", error);
         setLoading(false);
         return;
       }
     }
 
-    const { error } = await supabase
+    await supabase
       .from("products")
       .update({ ...updates, image: imagePath })
       .eq("id", id);
-
-    if (error) console.error("❌ update error", error);
 
     await fetchProducts();
     setLoading(false);
   }
 
-  /* ================= DELETE ================= */
+  /* ================= DELETE (OWNER + PIN) ================= */
   async function deleteProduct(id, image) {
-    console.log("🗑 deleteProduct", id);
+    // 🔒 OWNER ONLY
+    if (admin?.role !== "owner") {
+      alert("Owner approval required");
+      return false;
+    }
 
+    // 🔑 ASK FOR PIN
+    const pin = prompt("Enter owner PIN");
+    if (!pin) return false;
+
+    // 🔐 HASH PIN
+    const hashBuffer = await crypto.subtle.digest(
+      "SHA-256",
+      new TextEncoder().encode(pin)
+    );
+
+    const hashHex = Array.from(new Uint8Array(hashBuffer))
+      .map((b) => b.toString(16).padStart(2, "0"))
+      .join("");
+
+    // 🔎 FETCH STORED PIN
+    const { data: owner, error } = await supabase
+      .from("admins")
+      .select("pin_hash")
+      .eq("id", admin.id)
+      .single();
+
+    if (error || !owner?.pin_hash) {
+      alert("Owner PIN not set");
+      return false;
+    }
+
+    if (owner.pin_hash !== hashHex) {
+      alert("Invalid PIN");
+      return false;
+    }
+
+    // 🗑 DELETE PRODUCT
+    const { error: deleteError } = await supabase
+      .from("products")
+      .delete()
+      .eq("id", id);
+
+    if (deleteError) {
+      console.error("❌ delete failed", deleteError);
+      alert("Delete failed");
+      return false;
+    }
+
+    // 🧹 DELETE IMAGE
     if (image) {
       await supabase.storage.from("products").remove([image]);
     }
 
-    await supabase.from("products").delete().eq("id", id);
-    fetchProducts();
+    await fetchProducts();
+    return true;
   }
 
   useEffect(() => {

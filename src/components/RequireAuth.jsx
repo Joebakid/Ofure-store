@@ -1,17 +1,32 @@
 import { useEffect, useState } from "react";
-import { Navigate } from "react-router-dom";
+import { Navigate, useLocation } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 
 export default function RequireAuth({ children }) {
-  const [session, setSession] = useState(undefined);
+  const location = useLocation();
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // 1️⃣ Get initial session
     supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session);
+      setUser(data.session?.user ?? null);
+      setLoading(false);
     });
+
+    // 2️⃣ Listen for auth changes (CRITICAL)
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        setUser(session?.user ?? null);
+      }
+    );
+
+    return () => subscription.unsubscribe();
   }, []);
 
-  if (session === undefined) {
+  if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         Checking auth…
@@ -19,9 +34,15 @@ export default function RequireAuth({ children }) {
     );
   }
 
-  if (!session) {
-    console.warn("🔒 No session → login");
-    return <Navigate to="/login" replace />;
+  if (!user) {
+    console.warn("🔒 No user → redirect to login");
+    return (
+      <Navigate
+        to="/login"
+        replace
+        state={{ from: location }}
+      />
+    );
   }
 
   return children;

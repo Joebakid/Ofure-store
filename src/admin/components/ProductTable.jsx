@@ -4,13 +4,14 @@ import Loader from "../../components/Loader";
 import Pagination from "../../components/Pagination";
 
 const ITEMS_PER_PAGE = 8;
-const MIN_LOADING_TIME = 600; // 👈 milliseconds (feel free to tweak)
+const MIN_LOADING_TIME = 600;
 
 export default function ProductTable({
   products = [],
   loading,
   onUpdate,
   onDelete,
+  isOwner, // ✅ NEW
 }) {
   const [page, setPage] = useState(1);
   const [showLoader, setShowLoader] = useState(true);
@@ -27,7 +28,6 @@ export default function ProductTable({
     if (loading) {
       setShowLoader(true);
     } else {
-      // Keep loader visible slightly to avoid flicker
       timer = setTimeout(() => {
         setShowLoader(false);
       }, MIN_LOADING_TIME);
@@ -76,6 +76,7 @@ export default function ProductTable({
             product={product}
             onUpdate={onUpdate}
             onDelete={onDelete}
+            canDelete={isOwner} // ✅ OWNER ONLY
           />
         ))}
       </div>

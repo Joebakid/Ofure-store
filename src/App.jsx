@@ -8,21 +8,22 @@ import NotFound from "./pages/NotFound";
 
 import AdminProducts from "./admin/pages/AdminProducts";
 import AdminAnalytics from "./admin/pages/AdminAnalytics";
-import RequireAuth from "./components/RequireAuth";
+import CreatePin from "./admin/pages/CreatePin";
+import Admins from "./admin/pages/Admins";
+import AdminLayout from "./admin/AdminLayout";
+
 import CartModal from "./components/CartModal";
 import Footer from "./components/Footer";
 
+import { AdminProvider } from "./context/AdminContext";
 import { Analytics } from "@vercel/analytics/react";
 
 export default function App() {
   return (
     <BrowserRouter>
-      {/* App layout */}
       <div className="flex min-h-screen flex-col">
-        {/* Global UI */}
         <CartModal />
 
-        {/* Main content */}
         <main className="flex-1">
           <Routes>
             {/* ================= PUBLIC ================= */}
@@ -33,33 +34,28 @@ export default function App() {
 
             {/* ================= ADMIN ================= */}
             <Route
-              path="/admin/products"
+              path="/admin"
               element={
-                <RequireAuth>
-                  <AdminProducts />
-                </RequireAuth>
+                <AdminProvider>
+                  <AdminLayout />
+                </AdminProvider>
               }
-            />
-
-            <Route
-              path="/admin/analytics"
-              element={
-                <RequireAuth>
-                  <AdminAnalytics />
-                </RequireAuth>
-              }
-            />
+            >
+              <Route index element={<AdminProducts />} />
+              <Route path="products" element={<AdminProducts />} />
+              <Route path="analytics" element={<AdminAnalytics />} />
+              <Route path="admins" element={<Admins />} />
+              <Route path="create-pin" element={<CreatePin />} />
+            </Route>
 
             {/* ================= FALLBACK ================= */}
             <Route path="*" element={<NotFound />} />
           </Routes>
         </main>
 
-        {/* Footer always at bottom */}
         <Footer className="mt-auto" />
       </div>
 
-      {/* Vercel Analytics */}
       <Analytics />
     </BrowserRouter>
   );

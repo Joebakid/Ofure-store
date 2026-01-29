@@ -13,21 +13,19 @@ import { supabase } from "../lib/supabase";
 import { EVENTS } from "../analytics/analyticsEvents";
 import { logEvent } from "../analytics/analyticsClient";
 
-/* ================= CATEGORIES ================= */
+/* ================= CONFIG ================= */
 const CATEGORIES = ["Shirts", "Forever Living Products"];
 const ITEMS_PER_PAGE = 8;
 
 export default function Shop() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const { items, addItem, setOpen, cartEventId, cartMessage } =
-    useCart();
+  const { items, addItem, setOpen, cartEventId, cartMessage } = useCart();
 
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [toastVisible, setToastVisible] = useState(false);
   const [previewProduct, setPreviewProduct] = useState(null);
 
-  // ✅ Prevent spam analytics when clicking fast
   const lastViewedRef = useRef(null);
 
   /* ================= PARAMS ================= */
@@ -37,8 +35,10 @@ export default function Shop() {
   const rawPage = Number(searchParams.get("page")) || 1;
   const searchQuery = searchParams.get("q") ?? "";
 
-  /* ================= FETCH ================= */
+  /* ================= FETCH (HARDENED) ================= */
   useEffect(() => {
+    let mounted = true;
+
     async function fetchProducts() {
       setLoading(true);
 
@@ -46,18 +46,25 @@ export default function Shop() {
         .from("products")
         .select("*");
 
+      if (!mounted) return;
+
       if (error) {
         console.error("❌ Product fetch error:", error);
+        setProducts([]);
         setLoading(false);
         return;
       }
 
-      const withImages = data.map((p) => {
+      const safeData = Array.isArray(data) ? data : [];
+
+      const withImages = safeData.map((p) => {
+        if (!p.image) return { ...p, imageUrl: null };
+
         const { data: img } = supabase.storage
           .from("products")
           .getPublicUrl(p.image);
 
-        return { ...p, imageUrl: img?.publicUrl };
+        return { ...p, imageUrl: img?.publicUrl || null };
       });
 
       setProducts(withImages);
@@ -65,6 +72,10 @@ export default function Shop() {
     }
 
     fetchProducts();
+
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   /* ================= TOAST ================= */
@@ -76,12 +87,12 @@ export default function Shop() {
     return () => clearTimeout(t);
   }, [cartEventId, cartMessage]);
 
-  /* ================= FILTER + SORT + SEARCH ================= */
+  /* ================= FILTER + SORT ================= */
   const filteredProducts = useMemo(() => {
     return products
       .filter((p) => p.category === activeCategory)
       .filter((p) =>
-        p.name.toLowerCase().includes(searchQuery.toLowerCase())
+        p.name?.toLowerCase().includes(searchQuery.toLowerCase())
       )
       .sort((a, b) =>
         a.name.localeCompare(b.name, undefined, {
@@ -105,11 +116,9 @@ export default function Shop() {
     currentPage * ITEMS_PER_PAGE
   );
 
-  /* ================= SCROLL FIX ================= */
+  /* ================= SCROLL ================= */
   useEffect(() => {
-    requestAnimationFrame(() => {
-      window.scrollTo({ top: 0, behavior: "smooth" });
-    });
+    window.scrollTo({ top: 0, behavior: "smooth" });
   }, [currentPage, activeCategory, searchQuery]);
 
   /* ================= HANDLERS ================= */
@@ -125,10 +134,7 @@ export default function Shop() {
   function handleCategoryChange(cat) {
     if (cat === activeCategory) return;
 
-    const next = { category: cat, page: 1 };
-    if (searchQuery) next.q = searchQuery;
-
-    setSearchParams(next);
+    setSearchParams({ category: cat, page: 1 });
   }
 
   function handleSearchChange(value) {
@@ -139,10 +145,7 @@ export default function Shop() {
   }
 
   function clearSearch() {
-    setSearchParams({
-      category: activeCategory,
-      page: 1,
-    });
+    setSearchParams({ category: activeCategory, page: 1 });
   }
 
   function handleAddToCart(product) {
@@ -153,15 +156,11 @@ export default function Shop() {
     });
   }
 
-  // ✅ Track product preview (VIEW EVENT)
   function handlePreview(product) {
     setPreviewProduct(product);
 
-    // 🛡 prevent duplicate spam logs
     if (lastViewedRef.current === product.id) return;
     lastViewedRef.current = product.id;
-
-    console.log("👁 Tracking product view:", product.name);
 
     logEvent(EVENTS.PRODUCT_VIEW, {
       productId: product.id,
@@ -171,27 +170,17 @@ export default function Shop() {
     });
   }
 
+  /* ================= RENDER ================= */
   return (
     <div className="min-h-screen flex flex-col relative">
-      {/* ================= FLOATING CART BUTTON ================= */}
+      {/* FLOATING CART */}
       <button
         onClick={() => setOpen(true)}
-        className="
-          fixed bottom-6 right-6 z-50
-          w-14 h-14 rounded-full bg-mauve text-white
-          flex items-center justify-center shadow-xl
-          hover:scale-105 active:scale-95 transition
-        "
+        className="fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full bg-mauve text-white flex items-center justify-center shadow-xl"
       >
         <FaShoppingBag size={20} />
-
         {items.length > 0 && (
-          <span
-            className="
-              absolute -top-1 -right-1 bg-black text-white text-xs
-              w-5 h-5 rounded-full flex items-center justify-center
-            "
-          >
+          <span className="absolute -top-1 -right-1 bg-black text-white text-xs w-5 h-5 rounded-full flex items-center justify-center">
             {items.length}
           </span>
         )}
@@ -199,51 +188,8 @@ export default function Shop() {
 
       {/* TOAST */}
       {toastVisible && (
-        <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-40 bg-mauve text-white px-5 py-2 rounded-full shadow-lg text-sm">
+        <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-40 bg-mauve text-white px-5 py-2 rounded-full text-sm">
           {cartMessage}
-        </div>
-      )}
-
-      {/* PRODUCT PREVIEW MODAL */}
-      {previewProduct && (
-        <div
-          onClick={() => setPreviewProduct(null)}
-          className="fixed inset-0 z-40 bg-black/60 flex items-center justify-center p-4"
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            className="bg-white rounded-3xl max-w-md w-full p-4"
-          >
-            <img
-              src={previewProduct.imageUrl}
-              alt={previewProduct.name}
-              className="w-full h-72 object-contain rounded-2xl"
-            />
-
-            <div className="mt-4 space-y-2">
-              <h2 className="font-semibold">
-                {previewProduct.name}
-              </h2>
-
-              <p className="text-sm text-gray-600">
-                {previewProduct.description}
-              </p>
-
-              <p className="font-medium text-mauve">
-                ₦{Number(previewProduct.price).toLocaleString()}
-              </p>
-
-              <button
-                onClick={() => {
-                  handleAddToCart(previewProduct);
-                  setPreviewProduct(null);
-                }}
-                className="mt-2 w-full py-2 rounded-full bg-mauve text-white"
-              >
-                Add to cart
-              </button>
-            </div>
-          </div>
         </div>
       )}
 
@@ -251,11 +197,7 @@ export default function Shop() {
       <section className="app-container section-pad flex items-center">
         <BackButton to="/" />
         <h1 className="text-xl font-semibold mx-auto">Store</h1>
-
-        <Link
-          to="/admin/products"
-          className="px-4 py-2 rounded-full text-sm bg-peach/50"
-        >
+        <Link to="/admin" className="px-4 py-2 rounded-full text-sm bg-peach/50">
           Admin
         </Link>
       </section>
@@ -268,13 +210,12 @@ export default function Shop() {
             placeholder="Search products…"
             value={searchQuery}
             onChange={(e) => handleSearchChange(e.target.value)}
-            className="w-full px-4 py-2 pr-10 rounded-full border border-gray-200 focus:outline-none focus:ring-2 focus:ring-mauve/40"
+            className="w-full px-4 py-2 pr-10 rounded-full border"
           />
-
           {searchQuery && (
             <button
               onClick={clearSearch}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              className="absolute right-3 top-1/2 -translate-y-1/2"
             >
               <FaTimes size={12} />
             </button>
@@ -303,8 +244,10 @@ export default function Shop() {
       <div className="flex-1">
         {loading ? (
           <Loader />
+        ) : paginatedProducts.length === 0 ? (
+          <p className="text-center opacity-60">No products found.</p>
         ) : (
-          <section className="section grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-5">
+          <section className="section grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {paginatedProducts.map((product) => (
               <ProductCard
                 key={product.id}

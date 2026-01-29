@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase";
+import { useAdmin } from "../../context/AdminContext";
 
 import AnalyticsGrid from "../components/AnalyticsGrid";
 import AnalyticsTable from "../components/AnalyticsTable";
@@ -10,6 +11,8 @@ import Pagination from "../../components/Pagination";
 const PAGE_SIZE = 6;
 
 export default function AdminAnalytics() {
+  const { admin, loading: adminLoading } = useAdmin();
+
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -29,6 +32,8 @@ export default function AdminAnalytics() {
 
   /* ================= LOAD EVENTS ================= */
   useEffect(() => {
+    if (!admin) return;
+
     async function loadEvents() {
       setLoading(true);
 
@@ -48,7 +53,7 @@ export default function AdminAnalytics() {
     }
 
     loadEvents();
-  }, []);
+  }, [admin]);
 
   /* ================= MONTH FILTER ================= */
   const filteredEvents = useMemo(() => {
@@ -175,13 +180,17 @@ export default function AdminAnalytics() {
     [mostViewedProducts, viewPage]
   );
 
-  /* ================= LOADING ================= */
-  if (loading) {
+  /* ================= LOADING STATES ================= */
+  if (adminLoading || loading) {
     return (
       <div className="app-container py-20 flex justify-center">
         <Loader />
       </div>
     );
+  }
+
+  if (!admin) {
+    return null;
   }
 
   return (
