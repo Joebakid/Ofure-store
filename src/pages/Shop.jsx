@@ -35,7 +35,7 @@ export default function Shop() {
   const rawPage = Number(searchParams.get("page")) || 1;
   const searchQuery = searchParams.get("q") ?? "";
 
-  /* ================= FETCH (HARDENED) ================= */
+  /* ================= FETCH ================= */
   useEffect(() => {
     let mounted = true;
 
@@ -72,22 +72,18 @@ export default function Shop() {
     }
 
     fetchProducts();
-
-    return () => {
-      mounted = false;
-    };
+    return () => (mounted = false);
   }, []);
 
   /* ================= TOAST ================= */
   useEffect(() => {
     if (!cartEventId) return;
-
     setToastVisible(true);
     const t = setTimeout(() => setToastVisible(false), 1600);
     return () => clearTimeout(t);
   }, [cartEventId, cartMessage]);
 
-  /* ================= FILTER + SORT ================= */
+  /* ================= FILTER ================= */
   const filteredProducts = useMemo(() => {
     return products
       .filter((p) => p.category === activeCategory)
@@ -133,14 +129,12 @@ export default function Shop() {
 
   function handleCategoryChange(cat) {
     if (cat === activeCategory) return;
-
     setSearchParams({ category: cat, page: 1 });
   }
 
   function handleSearchChange(value) {
     const next = { category: activeCategory, page: 1 };
     if (value) next.q = value;
-
     setSearchParams(next);
   }
 
@@ -267,6 +261,56 @@ export default function Shop() {
         onPageChange={handlePageChange}
         className="pb-32"
       />
+
+      {/* ================= PREVIEW MODAL ================= */}
+      {previewProduct && (
+        <div
+          className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center px-4"
+          onClick={() => setPreviewProduct(null)}
+        >
+          <div
+            className="bg-white rounded-xl max-w-md w-full p-4 relative"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={() => setPreviewProduct(null)}
+              className="absolute top-3 right-3 text-gray-500"
+            >
+              <FaTimes />
+            </button>
+
+            {previewProduct.imageUrl && (
+              <img
+                src={previewProduct.imageUrl}
+                alt={previewProduct.name}
+                className="w-full h-64 object-cover rounded-lg mb-4"
+              />
+            )}
+
+            <h2 className="text-lg font-semibold mb-1">
+              {previewProduct.name}
+            </h2>
+
+            <p className="text-sm opacity-70 mb-2">
+              {previewProduct.category}
+            </p>
+
+            <p className="font-semibold mb-4">
+              ₦{previewProduct.price}
+            </p>
+
+            <button
+              onClick={() => {
+                handleAddToCart(previewProduct);
+                setPreviewProduct(null);
+              }}
+              className="w-full py-2 rounded-full bg-mauve text-white"
+            >
+              Add to Cart
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

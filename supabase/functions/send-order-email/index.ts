@@ -8,7 +8,7 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
-  // ✅ Handle CORS preflight
+  // Handle CORS preflight
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
@@ -16,9 +16,9 @@ serve(async (req) => {
   try {
     const { order } = await req.json();
 
-    if (!order?.email) {
+    if (!order || !order.email) {
       return new Response(
-        JSON.stringify({ error: "Missing order email" }),
+        JSON.stringify({ error: "Missing order data" }),
         { status: 400, headers: corsHeaders }
       );
     }
@@ -30,6 +30,7 @@ serve(async (req) => {
 
     const emailHtml = `
       <h2>🛒 New Order Received</h2>
+
       <p><strong>Name:</strong> ${order.name}</p>
       <p><strong>Email:</strong> ${order.email}</p>
       <p><strong>Phone:</strong> ${order.phone}</p>
@@ -39,8 +40,8 @@ serve(async (req) => {
       <ul>
         ${order.items
           .map(
-            (i: any) =>
-              `<li>${i.name} × ${i.qty}</li>`
+            (item: any) =>
+              `<li>${item.name} × ${item.qty}</li>`
           )
           .join("")}
       </ul>
@@ -59,8 +60,12 @@ serve(async (req) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from: "LiveOutLoud <orders@resend.dev>",
-        to: ["josephbawo@gmail.com"], // 👈 your admin email
+        // ✅ MUST BE YOUR VERIFIED DOMAIN
+        from: "Live Out Loud <orders@liveoutloud.com.ng>",
+
+        // ✅ SEND TO YOUR EMPLOYER EMAIL
+        to: ["livenoutloud26@gmail.com"],
+
         subject: "🧾 New Order Received",
         html: emailHtml,
       }),
