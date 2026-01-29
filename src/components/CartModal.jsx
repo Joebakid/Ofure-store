@@ -6,8 +6,7 @@ import { supabase } from "../lib/supabase";
 import { payWithPaystack } from "../lib/paystack";
 
 /* ================= DELIVERY CONFIG ================= */
-const BASE_DELIVERY_FEE = 3000; // Starts at ₦3000 (can increase up to ₦5,000)
-
+const BASE_DELIVERY_FEE = 100; // Starts at ₦3000 (can increase up to ₦5,000)
 /* =================================================== */
 
 export default function CartModal() {
@@ -24,6 +23,9 @@ export default function CartModal() {
 
   const [showPaystackForm, setShowPaystackForm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+
+  const [resultModal, setResultModal] = useState(null); 
+  // "success" | "warning" | "error"
 
   const [form, setForm] = useState({
     name: "",
@@ -119,11 +121,7 @@ export default function CartModal() {
         }
       );
 
-      if (!res.ok) {
-        const text = await res.text();
-        throw new Error(text);
-      }
-
+      if (!res.ok) throw new Error("Email failed");
       await res.json();
       return true;
     } catch (err) {
@@ -177,7 +175,6 @@ export default function CartModal() {
         };
 
         try {
-          // ✅ Save order FIRST
           const { data, error } = await supabase
             .from("orders")
             .insert([order])
@@ -186,28 +183,20 @@ export default function CartModal() {
 
           if (error) {
             console.error("❌ Order save failed:", error);
-            alert("❌ Payment received but order could not be saved.");
-            return; // 🚨 HARD STOP — nothing else runs
+            setResultModal("error");
+            return;
           }
 
-          console.log("✅ Order saved:", data);
-
-          // ✅ Send email only after DB success
           const emailOk = await sendOrderEmail(data);
 
-          if (!emailOk) {
-            alert("⚠️ Order saved but confirmation email failed.");
-          } else {
-            alert("✅ Payment successful! Confirmation email sent.");
-          }
+          setResultModal(emailOk ? "success" : "warning");
 
           clearCart();
           setShowPaystackForm(false);
-          setOpen(false);
           setErrors({});
         } catch (err) {
           console.error("❌ Unexpected checkout error:", err);
-          alert("❌ Unexpected error while processing order.");
+          setResultModal("error");
         } finally {
           setSubmitting(false);
         }
@@ -221,167 +210,214 @@ export default function CartModal() {
   };
 
   return (
-    <div
-      className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center bg-black/30 backdrop-blur-sm"
-      onClick={() => setOpen(false)}
-    >
+    <>
+      {/* ================= CART MODAL ================= */}
       <div
-        onClick={(e) => e.stopPropagation()}
-        className="w-full sm:max-w-md bg-milk rounded-t-3xl sm:rounded-3xl p-6 max-h-[90vh] overflow-y-auto shadow-xl"
+        className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center bg-black/30 backdrop-blur-sm"
+        onClick={() => setOpen(false)}
       >
-        {/* HEADER */}
-        <div className="sticky top-0 bg-milk pb-4 flex justify-between items-center z-10">
-          <h2 className="font-semibold text-lg">Your Cart</h2>
-          <button onClick={() => setOpen(false)}>
-            <FaTimes />
-          </button>
-        </div>
+        <div
+          onClick={(e) => e.stopPropagation()}
+          className="w-full sm:max-w-md bg-milk rounded-t-3xl sm:rounded-3xl p-6 max-h-[90vh] overflow-y-auto shadow-xl"
+        >
+          {/* HEADER */}
+          <div className="sticky top-0 bg-milk pb-4 flex justify-between items-center z-10">
+            <h2 className="font-semibold text-lg">Your Cart</h2>
+            <button onClick={() => setOpen(false)}>
+              <FaTimes />
+            </button>
+          </div>
 
-        {/* EMPTY */}
-        {items.length === 0 ? (
-          <p className="text-center opacity-70 py-10">Cart is empty</p>
-        ) : (
-          <>
-            {/* ITEMS */}
-            <div className="space-y-4 mb-4">
-              {items.map((item) => (
-                <div
-                  key={item.name}
-                  className="flex items-center gap-3 bg-peach/40 p-3 rounded-2xl"
-                >
-                  <img
-                    src={item.image}
-                    alt={item.name}
-                    className="w-14 h-14 rounded-xl object-cover"
+          {/* EMPTY */}
+          {items.length === 0 ? (
+            <p className="text-center opacity-70 py-10">Cart is empty</p>
+          ) : (
+            <>
+              {/* ITEMS */}
+              <div className="space-y-4 mb-4">
+                {items.map((item) => (
+                  <div
+                    key={item.name}
+                    className="flex items-center gap-3 bg-peach/40 p-3 rounded-2xl"
+                  >
+                    <img
+                      src={item.image}
+                      alt={item.name}
+                      className="w-14 h-14 rounded-xl object-cover"
+                    />
+
+                    <div className="flex-1">
+                      <p className="text-sm font-medium">{item.name}</p>
+                      <p className="text-xs opacity-70">
+                        ₦{item.price.toLocaleString()} × {item.qty}
+                      </p>
+                    </div>
+
+                    <button onClick={() => removeItem(item.name)}>
+                      <FaTrash />
+                    </button>
+                  </div>
+                ))}
+              </div>
+
+              {/* PRICE */}
+              <div className="bg-peach/30 rounded-xl p-3 mb-4 text-sm space-y-1">
+                <div className="flex justify-between">
+                  <span>Subtotal</span>
+                  <span>₦{total.toLocaleString()}</span>
+                </div>
+
+                <div className="flex justify-between">
+                  <span>Delivery</span>
+                  <span>₦{deliveryFee.toLocaleString()}</span>
+                </div>
+
+                {/* ✅ Delivery notice (NOT OMITTED) */}
+                <p className="text-xs text-gray-600 mt-1">
+                  Delivery fee starts at ₦3000 and may increase up to ₦5,000
+                  depending on your location.
+                </p>
+
+                <div className="flex justify-between font-semibold pt-2 border-t mt-2">
+                  <span>Total</span>
+                  <span>₦{grandTotal.toLocaleString()}</span>
+                </div>
+              </div>
+
+              {/* CLEAR */}
+              <button
+                onClick={() => {
+                  clearCart();
+                  setShowPaystackForm(false);
+                  setErrors({});
+                }}
+                className="w-full mb-4 py-2 rounded-full text-sm border border-red-300 text-red-600 hover:bg-red-50"
+              >
+                Clear Cart
+              </button>
+
+              {/* PAYSTACK FORM */}
+              {showPaystackForm ? (
+                <div className="space-y-3 pb-4">
+                  <input
+                    placeholder="Full Name"
+                    value={form.name}
+                    onChange={(e) =>
+                      setForm({ ...form, name: e.target.value })
+                    }
+                    className="w-full px-4 py-2 rounded-xl border"
                   />
 
-                  <div className="flex-1">
-                    <p className="text-sm font-medium">{item.name}</p>
-                    <p className="text-xs opacity-70">
-                      ₦{item.price.toLocaleString()} × {item.qty}
-                    </p>
-                  </div>
+                  <input
+                    placeholder="Email"
+                    value={form.email}
+                    onChange={(e) =>
+                      setForm({ ...form, email: e.target.value })
+                    }
+                    className="w-full px-4 py-2 rounded-xl border"
+                  />
 
-                  <button onClick={() => removeItem(item.name)}>
-                    <FaTrash />
+                  <input
+                    placeholder="Phone Number"
+                    value={form.phone}
+                    onChange={(e) =>
+                      setForm({ ...form, phone: e.target.value })
+                    }
+                    className="w-full px-4 py-2 rounded-xl border"
+                  />
+
+                  <textarea
+                    placeholder="Delivery Address"
+                    value={form.address}
+                    onChange={(e) =>
+                      setForm({ ...form, address: e.target.value })
+                    }
+                    className="w-full px-4 py-2 rounded-xl border resize-none"
+                    rows={3}
+                  />
+
+                  <button
+                    disabled={submitting}
+                    onClick={submitPaystack}
+                    className="w-full py-3 rounded-full bg-black text-white disabled:opacity-50"
+                  >
+                    {submitting
+                      ? "Processing..."
+                      : `Pay ₦${grandTotal.toLocaleString()}`}
+                  </button>
+
+                  <button
+                    onClick={() => setShowPaystackForm(false)}
+                    className="w-full text-sm opacity-70"
+                  >
+                    Cancel
                   </button>
                 </div>
-              ))}
-            </div>
+              ) : (
+                <div className="space-y-3 pb-4">
+                  <button
+                    onClick={checkoutWhatsApp}
+                    className="w-full py-3 rounded-full bg-mauve text-white"
+                  >
+                    Checkout via WhatsApp · ₦{grandTotal.toLocaleString()}
+                  </button>
 
-            {/* PRICE */}
-            <div className="bg-peach/30 rounded-xl p-3 mb-4 text-sm space-y-1">
-              <div className="flex justify-between">
-                <span>Subtotal</span>
-                <span>₦{total.toLocaleString()}</span>
-              </div>
+                  <button
+                    onClick={() => setShowPaystackForm(true)}
+                    className="w-full py-3 rounded-full bg-black text-white"
+                  >
+                    Checkout via Paystack
+                  </button>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      </div>
 
-              <div className="flex justify-between">
-                <span>Delivery</span>
-                <span>₦{deliveryFee.toLocaleString()}</span>
-              </div>
+      {/* ================= RESULT MODAL ================= */}
+      {resultModal && (
+        <div className="fixed inset-0 z-[10000] bg-black/40 flex items-center justify-center">
+          <div className="bg-white rounded-3xl p-6 w-[90%] max-w-sm text-center">
+            {resultModal === "success" && (
+              <>
+                <h3 className="font-semibold text-lg">Payment Successful</h3>
+                <p className="text-sm opacity-70 mt-1">
+                  Your order has been placed and confirmation email sent.
+                </p>
+              </>
+            )}
 
-              {/* ✅ Delivery notice */}
-              <p className="text-xs text-gray-600 mt-1">
-                Delivery fee starts at ₦3000 and may increase up to ₦5,000
-                depending on your location.
-              </p>
+            {resultModal === "warning" && (
+              <>
+                <h3 className="font-semibold text-lg">Order Placed</h3>
+                <p className="text-sm opacity-70 mt-1">
+                  Order saved, but confirmation email failed.
+                </p>
+              </>
+            )}
 
-              <div className="flex justify-between font-semibold pt-2 border-t mt-2">
-                <span>Total</span>
-                <span>₦{grandTotal.toLocaleString()}</span>
-              </div>
-            </div>
+            {resultModal === "error" && (
+              <>
+                <h3 className="font-semibold text-lg">Something Went Wrong</h3>
+                <p className="text-sm opacity-70 mt-1">
+                  Payment was received but order could not be saved.
+                </p>
+              </>
+            )}
 
-            {/* CLEAR */}
             <button
               onClick={() => {
-                clearCart();
-                setShowPaystackForm(false);
-                setErrors({});
+                setResultModal(null);
+                setOpen(false);
               }}
-              className="w-full mb-4 py-2 rounded-full text-sm border border-red-300 text-red-600 hover:bg-red-50"
+              className="mt-4 w-full py-2 rounded-full bg-black text-white"
             >
-              Clear Cart
+              Close
             </button>
-
-            {/* PAYSTACK FORM */}
-            {showPaystackForm ? (
-              <div className="space-y-3 pb-4">
-                <input
-                  placeholder="Full Name"
-                  value={form.name}
-                  onChange={(e) =>
-                    setForm({ ...form, name: e.target.value })
-                  }
-                  className="w-full px-4 py-2 rounded-xl border"
-                />
-
-                <input
-                  placeholder="Email"
-                  value={form.email}
-                  onChange={(e) =>
-                    setForm({ ...form, email: e.target.value })
-                  }
-                  className="w-full px-4 py-2 rounded-xl border"
-                />
-
-                <input
-                  placeholder="Phone Number"
-                  value={form.phone}
-                  onChange={(e) =>
-                    setForm({ ...form, phone: e.target.value })
-                  }
-                  className="w-full px-4 py-2 rounded-xl border"
-                />
-
-                <textarea
-                  placeholder="Delivery Address"
-                  value={form.address}
-                  onChange={(e) =>
-                    setForm({ ...form, address: e.target.value })
-                  }
-                  className="w-full px-4 py-2 rounded-xl border resize-none"
-                  rows={3}
-                />
-
-                <button
-                  disabled={submitting}
-                  onClick={submitPaystack}
-                  className="w-full py-3 rounded-full bg-black text-white disabled:opacity-50"
-                >
-                  {submitting
-                    ? "Processing..."
-                    : `Pay ₦${grandTotal.toLocaleString()}`}
-                </button>
-
-                <button
-                  onClick={() => setShowPaystackForm(false)}
-                  className="w-full text-sm opacity-70"
-                >
-                  Cancel
-                </button>
-              </div>
-            ) : (
-              <div className="space-y-3 pb-4">
-                <button
-                  onClick={checkoutWhatsApp}
-                  className="w-full py-3 rounded-full bg-mauve text-white"
-                >
-                  Checkout via WhatsApp · ₦{grandTotal.toLocaleString()}
-                </button>
-
-                <button
-                  onClick={() => setShowPaystackForm(true)}
-                  className="w-full py-3 rounded-full bg-black text-white"
-                >
-                  Checkout via Paystack
-                </button>
-              </div>
-            )}
-          </>
-        )}
-      </div>
-    </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
