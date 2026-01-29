@@ -6,14 +6,12 @@ import { CATEGORIES } from "../utils/categories";
 export default function ProductRow({
   product,
   onUpdate,
-  onDelete,
+  onRequestDelete, // ✅ NEW
   loading,
   canDelete,
 }) {
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [deleting, setDeleting] = useState(false);
-  const [deleted, setDeleted] = useState(false);
 
   const [name, setName] = useState(product.name);
   const [price, setPrice] = useState(product.price);
@@ -44,37 +42,17 @@ export default function ProductRow({
     setEditing(false);
   }
 
-  async function handleDelete() {
-    if (!canDelete) {
-      alert("Owner approval required");
-      return;
-    }
-
-    if (!window.confirm("Delete this product?")) return;
-
-    setDeleting(true);
-
-    // ✅ only mark deleted if DB deletion succeeds
-    const success = await onDelete(product.id, product.image);
-
-    if (success) {
-      setDeleted(true);
-    }
-
-    setDeleting(false);
+  // ✅ NO DELETE LOGIC HERE
+  function handleDeleteClick() {
+    if (!canDelete) return;
+    onRequestDelete(product);
   }
 
   return (
     <div className="relative bg-white/70 rounded-xl p-4 mb-4">
-      {(saving || deleting || loading) && (
+      {(saving || loading) && (
         <div className="absolute inset-0 bg-white/80 flex items-center justify-center z-10">
-          {deleting ? "Deleting…" : "Saving…"}
-        </div>
-      )}
-
-      {deleted && (
-        <div className="absolute inset-0 bg-green-50 flex items-center justify-center z-10">
-          ✅ Deleted
+          Saving…
         </div>
       )}
 
@@ -134,7 +112,10 @@ export default function ProductRow({
         <div className="flex gap-3 items-start">
           {editing ? (
             <>
-              <button onClick={handleSave} className="text-green-600">
+              <button
+                onClick={handleSave}
+                className="text-green-600"
+              >
                 Save
               </button>
               <button onClick={() => setEditing(false)}>
@@ -151,10 +132,12 @@ export default function ProductRow({
               </button>
 
               <button
-                onClick={handleDelete}
+                onClick={handleDeleteClick}
                 disabled={!canDelete}
                 className={`text-red-500 ${
-                  !canDelete ? "opacity-40 cursor-not-allowed" : ""
+                  !canDelete
+                    ? "opacity-40 cursor-not-allowed"
+                    : ""
                 }`}
               >
                 Delete

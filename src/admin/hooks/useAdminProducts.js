@@ -107,58 +107,18 @@ export function useAdminProducts(admin) {
     setLoading(false);
   }
 
-  /* ================= DELETE (OWNER + PIN) ================= */
+  /* ================= DELETE (EXECUTION ONLY) ================= */
   async function deleteProduct(productId, imagePath) {
-    // 🔒 Owner only (frontend)
-    if (admin?.role !== "owner") {
-      alert("Owner approval required");
-      return false;
-    }
-
-    // 🔑 Ask for PIN
-    const pin = prompt("Enter owner PIN");
-    if (!pin) return false;
-
-    // 🔐 Hash PIN
-    const hashBuffer = await crypto.subtle.digest(
-      "SHA-256",
-      new TextEncoder().encode(pin)
-    );
-
-    const hashHex = Array.from(new Uint8Array(hashBuffer))
-      .map((b) => b.toString(16).padStart(2, "0"))
-      .join("");
-
-    // 🔎 Fetch owner record (FIXED)
-    const { data: owner, error } = await supabase
-      .from("admins")
-      .select("pin_hash")
-      .eq("user_id", admin.user_id) // ✅ FIX IS HERE
-      .single();
-
-    if (error || !owner?.pin_hash) {
-      alert("Owner PIN not set");
-      return false;
-    }
-
-    if (owner.pin_hash !== hashHex) {
-      alert("Invalid PIN");
-      return false;
-    }
-
-    // 🗑 Delete product (RLS enforces owner)
-    const { error: deleteError } = await supabase
+    const { error } = await supabase
       .from("products")
       .delete()
       .eq("id", productId);
 
-    if (deleteError) {
-      console.error("❌ delete failed", deleteError);
-      alert("Delete failed");
+    if (error) {
+      console.error("❌ delete failed", error);
       return false;
     }
 
-    // 🧹 Delete image
     if (imagePath) {
       await supabase.storage.from("products").remove([imagePath]);
     }

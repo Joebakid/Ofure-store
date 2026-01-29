@@ -5,6 +5,7 @@ import { supabase } from "../../lib/supabase";
 import AdminHeader from "../components/AdminHeader";
 import ProductForm from "../components/ProductForm";
 import ProductTable from "../components/ProductTable";
+import OwnerPinModal from "../components/OwnerPinModal";
 import { useAdminProducts } from "../hooks/useAdminProducts";
 import Loader from "../../components/Loader";
 import { useAdmin } from "../../context/AdminContext";
@@ -12,6 +13,10 @@ import { useAdmin } from "../../context/AdminContext";
 export default function AdminProducts() {
   const navigate = useNavigate();
   const [formKey, setFormKey] = useState(0);
+
+  // 🔐 PIN modal state
+  const [pinOpen, setPinOpen] = useState(false);
+  const [pendingDelete, setPendingDelete] = useState(null);
 
   const { admin, loading: adminLoading } = useAdmin();
 
@@ -33,6 +38,25 @@ export default function AdminProducts() {
   async function handleCreate(product, imageFile) {
     await createProduct(product, imageFile);
     setFormKey((k) => k + 1);
+  }
+
+  // 🧨 user clicked delete → ask for PIN
+  function handleRequestDelete(product) {
+    if (!isOwner) return;
+    setPendingDelete(product);
+    setPinOpen(true);
+  }
+
+  // ✅ PIN approved → delete for real
+  async function handleApprovedDelete() {
+    if (!pendingDelete) return;
+
+    await deleteProduct(
+      pendingDelete.id,
+      pendingDelete.image
+    );
+
+    setPendingDelete(null);
   }
 
   if (adminLoading) {
@@ -59,8 +83,18 @@ export default function AdminProducts() {
         products={products}
         loading={loading}
         onUpdate={updateProduct}
-        onDelete={deleteProduct}
+        onRequestDelete={handleRequestDelete} // ✅ IMPORTANT
         canDelete={isOwner}
+      />
+
+      {/* 🔐 OWNER PIN MODAL */}
+      <OwnerPinModal
+        open={pinOpen}
+        onClose={() => {
+          setPinOpen(false);
+          setPendingDelete(null);
+        }}
+        onApproved={handleApprovedDelete}
       />
     </div>
   );
