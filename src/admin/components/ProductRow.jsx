@@ -6,12 +6,14 @@ import { CATEGORIES } from "../utils/categories";
 export default function ProductRow({
   product,
   onUpdate,
-  onRequestDelete, // ✅ NEW
+  onRequestDelete, // ✅ modal-based delete
   loading,
   canDelete,
 }) {
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false); // ✅ RESTORED
+  const [deleted, setDeleted] = useState(false);   // ✅ RESTORED
 
   const [name, setName] = useState(product.name);
   const [price, setPrice] = useState(product.price);
@@ -42,17 +44,34 @@ export default function ProductRow({
     setEditing(false);
   }
 
-  // ✅ NO DELETE LOGIC HERE
-  function handleDeleteClick() {
+  // ✅ DELETE FLOW (animation handled here)
+  async function handleDeleteClick() {
     if (!canDelete) return;
-    onRequestDelete(product);
+
+    setDeleting(true);
+
+    const success = await onRequestDelete(product);
+
+    if (success) {
+      setDeleted(true);
+    }
+
+    setDeleting(false);
   }
 
   return (
     <div className="relative bg-white/70 rounded-xl p-4 mb-4">
-      {(saving || loading) && (
-        <div className="absolute inset-0 bg-white/80 flex items-center justify-center z-10">
-          Saving…
+      {/* ⏳ Saving / Deleting overlay */}
+      {(saving || deleting || loading) && (
+        <div className="absolute inset-0 bg-white/80 flex items-center justify-center z-10 text-sm font-medium">
+          {deleting ? "Deleting…" : "Saving…"}
+        </div>
+      )}
+
+      {/* ✅ Deleted success state */}
+      {deleted && (
+        <div className="absolute inset-0 bg-green-50 flex items-center justify-center z-10 text-green-700 font-medium">
+          ✅ Deleted
         </div>
       )}
 
@@ -75,12 +94,14 @@ export default function ProductRow({
                 value={name}
                 onChange={(e) => setName(e.target.value)}
               />
+
               <input
                 className="input"
                 type="number"
                 value={price}
                 onChange={(e) => setPrice(e.target.value)}
               />
+
               <select
                 className="input"
                 value={category}
@@ -90,6 +111,7 @@ export default function ProductRow({
                   <option key={c}>{c}</option>
                 ))}
               </select>
+
               <input
                 ref={fileRef}
                 type="file"
@@ -118,6 +140,7 @@ export default function ProductRow({
               >
                 Save
               </button>
+
               <button onClick={() => setEditing(false)}>
                 Cancel
               </button>

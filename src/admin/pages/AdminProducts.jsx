@@ -14,9 +14,10 @@ export default function AdminProducts() {
   const navigate = useNavigate();
   const [formKey, setFormKey] = useState(0);
 
-  // 🔐 PIN modal state
+  // 🔐 PIN modal + promise control
   const [pinOpen, setPinOpen] = useState(false);
   const [pendingDelete, setPendingDelete] = useState(null);
+  const [resolveDelete, setResolveDelete] = useState(null);
 
   const { admin, loading: adminLoading } = useAdmin();
 
@@ -40,23 +41,41 @@ export default function AdminProducts() {
     setFormKey((k) => k + 1);
   }
 
-  // 🧨 user clicked delete → ask for PIN
+  // 🧨 CALLED FROM ProductRow — MUST RETURN A PROMISE
   function handleRequestDelete(product) {
-    if (!isOwner) return;
-    setPendingDelete(product);
-    setPinOpen(true);
+    if (!isOwner) return Promise.resolve(false);
+
+    return new Promise((resolve) => {
+      setPendingDelete(product);
+      setResolveDelete(() => resolve);
+      setPinOpen(true);
+    });
   }
 
-  // ✅ PIN approved → delete for real
+  // ✅ PIN approved → perform delete → resolve promise
   async function handleApprovedDelete() {
     if (!pendingDelete) return;
 
-    await deleteProduct(
+    const success = await deleteProduct(
       pendingDelete.id,
       pendingDelete.image
     );
 
+    resolveDelete?.(success);
+
+    cleanupDeleteState();
+  }
+
+  // ❌ PIN cancelled
+  function handleCancelDelete() {
+    resolveDelete?.(false);
+    cleanupDeleteState();
+  }
+
+  function cleanupDeleteState() {
+    setPinOpen(false);
     setPendingDelete(null);
+    setResolveDelete(null);
   }
 
   if (adminLoading) {
@@ -83,17 +102,14 @@ export default function AdminProducts() {
         products={products}
         loading={loading}
         onUpdate={updateProduct}
-        onRequestDelete={handleRequestDelete} // ✅ IMPORTANT
+        onRequestDelete={handleRequestDelete} // ✅ PROMISE-BASED
         canDelete={isOwner}
       />
 
       {/* 🔐 OWNER PIN MODAL */}
       <OwnerPinModal
         open={pinOpen}
-        onClose={() => {
-          setPinOpen(false);
-          setPendingDelete(null);
-        }}
+        onClose={handleCancelDelete}
         onApproved={handleApprovedDelete}
       />
     </div>
