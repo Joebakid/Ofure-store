@@ -16,6 +16,9 @@ export default function AdminAnalytics() {
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  // ✅ REAL PRODUCTS COUNT
+  const [totalProducts, setTotalProducts] = useState(0);
+
   // 📅 Selected month (YYYY-MM)
   const [selectedMonth, setSelectedMonth] = useState(() => {
     const now = new Date();
@@ -24,13 +27,13 @@ export default function AdminAnalytics() {
     ).padStart(2, "0")}`;
   });
 
-  // 📄 Pagination state (independent per table)
+  // 📄 Pagination state
   const [countryPage, setCountryPage] = useState(1);
   const [loginPage, setLoginPage] = useState(1);
   const [postPage, setPostPage] = useState(1);
   const [viewPage, setViewPage] = useState(1);
 
-  /* ================= LOAD EVENTS ================= */
+  /* ================= LOAD ANALYTICS EVENTS ================= */
   useEffect(() => {
     if (!admin) return;
 
@@ -53,6 +56,26 @@ export default function AdminAnalytics() {
     }
 
     loadEvents();
+  }, [admin]);
+
+  /* ================= LOAD REAL PRODUCT COUNT ================= */
+  useEffect(() => {
+    if (!admin) return;
+
+    async function loadProductCount() {
+      const { count, error } = await supabase
+        .from("products")
+        .select("*", { count: "exact", head: true });
+
+      if (error) {
+        console.error("❌ Product count error:", error);
+        return;
+      }
+
+      setTotalProducts(count || 0);
+    }
+
+    loadProductCount();
   }, [admin]);
 
   /* ================= MONTH FILTER ================= */
@@ -78,7 +101,7 @@ export default function AdminAnalytics() {
     setViewPage(1);
   }, [selectedMonth]);
 
-  /* ================= DERIVED STATS ================= */
+  /* ================= SUMMARY STATS ================= */
   const stats = useMemo(() => {
     const admins = new Set(
       filteredEvents
@@ -96,12 +119,13 @@ export default function AdminAnalytics() {
         .filter(Boolean)
     ).size;
 
-    const products = filteredEvents.filter(
-      (e) => e.event === "product_create"
-    ).length;
-
-    return { admins, visits, countries, products };
-  }, [filteredEvents]);
+    return {
+      admins,
+      visits,
+      countries,
+      products: totalProducts,
+    };
+  }, [filteredEvents, totalProducts]);
 
   /* ================= COUNTRY BREAKDOWN ================= */
   const countryStats = useMemo(() => {
@@ -113,27 +137,18 @@ export default function AdminAnalytics() {
     });
 
     return Object.entries(map)
-      .map(([country, count]) => ({
-        country,
-        count,
-      }))
+      .map(([country, count]) => ({ country, count }))
       .sort((a, b) => b.count - a.count);
   }, [filteredEvents]);
 
   /* ================= ADMIN ACTIVITY ================= */
   const adminLogins = useMemo(
-    () =>
-      filteredEvents.filter(
-        (e) => e.event === "admin_login"
-      ),
+    () => filteredEvents.filter((e) => e.event === "admin_login"),
     [filteredEvents]
   );
 
   const productPosts = useMemo(
-    () =>
-      filteredEvents.filter(
-        (e) => e.event === "product_create"
-      ),
+    () => filteredEvents.filter((e) => e.event === "product_create"),
     [filteredEvents]
   );
 
@@ -154,7 +169,7 @@ export default function AdminAnalytics() {
       .slice(0, 50);
   }, [filteredEvents]);
 
-  /* ================= PAGINATION HELPERS ================= */
+  /* ================= PAGINATION ================= */
   function paginate(list, page) {
     const start = (page - 1) * PAGE_SIZE;
     return list.slice(start, start + PAGE_SIZE);
@@ -180,7 +195,7 @@ export default function AdminAnalytics() {
     [mostViewedProducts, viewPage]
   );
 
-  /* ================= LOADING STATES ================= */
+  /* ================= LOADING ================= */
   if (adminLoading || loading) {
     return (
       <div className="app-container py-20 flex justify-center">
@@ -189,73 +204,49 @@ export default function AdminAnalytics() {
     );
   }
 
-  if (!admin) {
-    return null;
-  }
+  if (!admin) return null;
 
   return (
     <div className="app-container py-10 space-y-12">
-      {/* BACK */}
       <BackButton to="/admin/products" />
 
       {/* HEADER */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <h1 className="text-xl font-semibold">
-          Analytics
-        </h1>
+        <h1 className="text-xl font-semibold">Analytics</h1>
 
-        {/* 📅 Month Picker */}
         <div className="flex items-center gap-3">
-          <label className="text-sm opacity-70">
-            Month
-          </label>
-
+          <label className="text-sm opacity-70">Month</label>
           <input
             type="month"
             value={selectedMonth}
-            onChange={(e) =>
-              setSelectedMonth(e.target.value)
-            }
+            onChange={(e) => setSelectedMonth(e.target.value)}
             className="border rounded-lg px-3 py-1 text-sm"
           />
         </div>
       </div>
 
-      {/* SUMMARY CARDS */}
+      {/* SUMMARY */}
       <AnalyticsGrid stats={stats} />
 
-      {/* 🌍 COUNTRY TABLE */}
+      {/* 🌍 COUNTRY */}
       <section>
-        <h2 className="font-semibold mb-3">
-          🌍 Visitors by Country
-        </h2>
-
+        <h2 className="font-semibold mb-3">🌍 Visitors by Country</h2>
         <AnalyticsTable
           columns={["Country", "Visits"]}
-          rows={pagedCountries.map((c) => [
-            c.country,
-            c.count,
-          ])}
+          rows={pagedCountries.map((c) => [c.country, c.count])}
         />
-
         <div className="mt-6">
           <Pagination
             currentPage={countryPage}
-            totalPages={Math.max(
-              1,
-              Math.ceil(countryStats.length / PAGE_SIZE)
-            )}
+            totalPages={Math.max(1, Math.ceil(countryStats.length / PAGE_SIZE))}
             onPageChange={setCountryPage}
           />
         </div>
       </section>
 
-      {/* 👤 ADMIN LOGIN ACTIVITY */}
+      {/* 👤 ADMIN LOGINS */}
       <section>
-        <h2 className="font-semibold mb-3">
-          👤 Admin Logins
-        </h2>
-
+        <h2 className="font-semibold mb-3">👤 Admin Logins</h2>
         <AnalyticsTable
           columns={["Admin Email", "Date"]}
           rows={pagedLogins.map((e) => [
@@ -263,14 +254,10 @@ export default function AdminAnalytics() {
             new Date(e.created_at).toLocaleString(),
           ])}
         />
-
         <div className="mt-6">
           <Pagination
             currentPage={loginPage}
-            totalPages={Math.max(
-              1,
-              Math.ceil(adminLogins.length / PAGE_SIZE)
-            )}
+            totalPages={Math.max(1, Math.ceil(adminLogins.length / PAGE_SIZE))}
             onPageChange={setLoginPage}
           />
         </div>
@@ -278,10 +265,7 @@ export default function AdminAnalytics() {
 
       {/* 📦 PRODUCT POSTS */}
       <section>
-        <h2 className="font-semibold mb-3">
-          📦 Products Posted by Admins
-        </h2>
-
+        <h2 className="font-semibold mb-3">📦 Products Posted by Admins</h2>
         <AnalyticsTable
           columns={["Admin Email", "Product", "Date"]}
           rows={pagedPosts.map((e) => [
@@ -290,41 +274,28 @@ export default function AdminAnalytics() {
             new Date(e.created_at).toLocaleString(),
           ])}
         />
-
         <div className="mt-6">
           <Pagination
             currentPage={postPage}
-            totalPages={Math.max(
-              1,
-              Math.ceil(productPosts.length / PAGE_SIZE)
-            )}
+            totalPages={Math.max(1, Math.ceil(productPosts.length / PAGE_SIZE))}
             onPageChange={setPostPage}
           />
         </div>
       </section>
 
-      {/* 🔥 MOST VIEWED PRODUCTS */}
+      {/* 🔥 MOST VIEWED */}
       <section>
-        <h2 className="font-semibold mb-3">
-          🔥 Most Viewed Products
-        </h2>
-
+        <h2 className="font-semibold mb-3">🔥 Most Viewed Products</h2>
         <AnalyticsTable
           columns={["Product", "Views"]}
-          rows={pagedViews.map((p) => [
-            p.name,
-            p.views,
-          ])}
+          rows={pagedViews.map((p) => [p.name, p.views])}
         />
-
         <div className="mt-6">
           <Pagination
             currentPage={viewPage}
             totalPages={Math.max(
               1,
-              Math.ceil(
-                mostViewedProducts.length / PAGE_SIZE
-              )
+              Math.ceil(mostViewedProducts.length / PAGE_SIZE)
             )}
             onPageChange={setViewPage}
           />
