@@ -283,21 +283,29 @@ export default function Shop() {
               <img
                 src={previewProduct.imageUrl}
                 alt={previewProduct.name}
-                className="w-full h-64 object-cover rounded-lg mb-4"
+                className="w-full max-h-80 object-contain rounded-lg mb-4 "
               />
             )}
 
-            <h2 className="text-lg font-semibold mb-1">
-              {previewProduct.name}
-            </h2>
+       <h2 className="text-lg font-semibold mb-1">
+  {previewProduct.name}
+</h2>
 
-            <p className="text-sm opacity-70 mb-2">
-              {previewProduct.category}
-            </p>
+<p className="text-sm opacity-70 mb-2">
+  {previewProduct.category}
+</p>
 
-            <p className="font-semibold mb-4">
-              ₦{previewProduct.price}
-            </p>
+{/* DESCRIPTION */}
+{previewProduct.description && (
+  <p className="text-sm leading-relaxed opacity-80 mb-4">
+    {previewProduct.description}
+  </p>
+)}
+
+<p className="font-semibold mb-4">
+  ₦{previewProduct.price}
+</p>
+
 
             <button
               onClick={() => {

@@ -19,6 +19,10 @@ export default function AdminAnalytics() {
   // ✅ REAL PRODUCTS COUNT
   const [totalProducts, setTotalProducts] = useState(0);
 
+  // ✅ PRODUCT DIFFERENCE COUNTS (ADDED)
+  const [shirtProducts, setShirtProducts] = useState(0);
+  const [foreverLivingProducts, setForeverLivingProducts] = useState(0);
+
   // 📅 Selected month (YYYY-MM)
   const [selectedMonth, setSelectedMonth] = useState(() => {
     const now = new Date();
@@ -58,25 +62,57 @@ export default function AdminAnalytics() {
     loadEvents();
   }, [admin]);
 
-  /* ================= LOAD REAL PRODUCT COUNT ================= */
-  useEffect(() => {
-    if (!admin) return;
+ 
+/* ================= LOAD REAL PRODUCT COUNT ================= */
+useEffect(() => {
+  if (!admin) return;
 
-    async function loadProductCount() {
-      const { count, error } = await supabase
-        .from("products")
-        .select("*", { count: "exact", head: true });
+  async function loadProductCount() {
+    const { count, error } = await supabase
+      .from("products")
+      .select("*", { count: "exact", head: true });
 
-      if (error) {
-        console.error("❌ Product count error:", error);
-        return;
-      }
-
-      setTotalProducts(count || 0);
+    if (error) {
+      console.error("❌ Product count error:", error);
+      return;
     }
 
-    loadProductCount();
-  }, [admin]);
+    setTotalProducts(count || 0);
+  }
+
+  loadProductCount();
+}, [admin]);
+
+
+  
+  /* ================= LOAD PRODUCT DIFFERENCE ================= */
+useEffect(() => {
+  if (!admin) return;
+
+  async function loadProductDifference() {
+    const { data, error } = await supabase
+      .from("products")
+      .select("category");
+
+    if (error) {
+      console.error("❌ Product difference error:", error);
+      return;
+    }
+
+    const shirts = data.filter(
+      (p) => p.category === "Shirts"
+    ).length;
+
+    const foreverLiving = data.filter(
+      (p) => p.category === "Forever Living Products"
+    ).length;
+
+    setShirtProducts(shirts);
+    setForeverLivingProducts(foreverLiving);
+  }
+
+  loadProductDifference();
+}, [admin]);
 
   /* ================= MONTH FILTER ================= */
   const filteredEvents = useMemo(() => {
@@ -119,13 +155,26 @@ export default function AdminAnalytics() {
         .filter(Boolean)
     ).size;
 
+    const otherProducts =
+      totalProducts - (shirtProducts + foreverLivingProducts);
+
     return {
       admins,
       visits,
       countries,
       products: totalProducts,
+
+      // ✅ DIFFERENCE
+      shirtProducts,
+      foreverLivingProducts,
+      otherProducts,
     };
-  }, [filteredEvents, totalProducts]);
+  }, [
+    filteredEvents,
+    totalProducts,
+    shirtProducts,
+    foreverLivingProducts,
+  ]);
 
   /* ================= COUNTRY BREAKDOWN ================= */
   const countryStats = useMemo(() => {
@@ -238,7 +287,10 @@ export default function AdminAnalytics() {
         <div className="mt-6">
           <Pagination
             currentPage={countryPage}
-            totalPages={Math.max(1, Math.ceil(countryStats.length / PAGE_SIZE))}
+            totalPages={Math.max(
+              1,
+              Math.ceil(countryStats.length / PAGE_SIZE)
+            )}
             onPageChange={setCountryPage}
           />
         </div>
@@ -257,7 +309,10 @@ export default function AdminAnalytics() {
         <div className="mt-6">
           <Pagination
             currentPage={loginPage}
-            totalPages={Math.max(1, Math.ceil(adminLogins.length / PAGE_SIZE))}
+            totalPages={Math.max(
+              1,
+              Math.ceil(adminLogins.length / PAGE_SIZE)
+            )}
             onPageChange={setLoginPage}
           />
         </div>
@@ -265,7 +320,9 @@ export default function AdminAnalytics() {
 
       {/* 📦 PRODUCT POSTS */}
       <section>
-        <h2 className="font-semibold mb-3">📦 Products Posted by Admins</h2>
+        <h2 className="font-semibold mb-3">
+          📦 Products Posted by Admins
+        </h2>
         <AnalyticsTable
           columns={["Admin Email", "Product", "Date"]}
           rows={pagedPosts.map((e) => [
@@ -277,7 +334,10 @@ export default function AdminAnalytics() {
         <div className="mt-6">
           <Pagination
             currentPage={postPage}
-            totalPages={Math.max(1, Math.ceil(productPosts.length / PAGE_SIZE))}
+            totalPages={Math.max(
+              1,
+              Math.ceil(productPosts.length / PAGE_SIZE)
+            )}
             onPageChange={setPostPage}
           />
         </div>
@@ -285,7 +345,9 @@ export default function AdminAnalytics() {
 
       {/* 🔥 MOST VIEWED */}
       <section>
-        <h2 className="font-semibold mb-3">🔥 Most Viewed Products</h2>
+        <h2 className="font-semibold mb-3">
+          🔥 Most Viewed Products
+        </h2>
         <AnalyticsTable
           columns={["Product", "Views"]}
           rows={pagedViews.map((p) => [p.name, p.views])}
