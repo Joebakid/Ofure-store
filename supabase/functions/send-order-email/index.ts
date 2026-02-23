@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -8,7 +9,6 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
-  // Handle CORS preflight
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
@@ -23,37 +23,51 @@ serve(async (req) => {
       );
     }
 
+    // ✅ INIT SUPABASE
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+    );
+
+    // ✅ SAVE ORDER TO DB
+    const { error: dbError } = await supabase
+      .from("shop_orders")
+      .insert([
+        {
+          name: order.name,
+          email: order.email,
+          phone: order.phone,
+          address: order.address,
+          items: order.items,
+          subtotal: order.subtotal,
+          delivery_fee: order.delivery_fee,
+          total: order.amount,
+          reference: order.reference,
+        },
+      ]);
+
+    if (dbError) throw dbError;
+
+    // ✅ SEND EMAIL
     const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
-    if (!RESEND_API_KEY) {
-      throw new Error("RESEND_API_KEY not configured");
-    }
 
     const emailHtml = `
       <h2>🛒 New Order Received</h2>
-
       <p><strong>Name:</strong> ${order.name}</p>
       <p><strong>Email:</strong> ${order.email}</p>
       <p><strong>Phone:</strong> ${order.phone}</p>
       <p><strong>Address:</strong> ${order.address}</p>
-
       <h3>Items</h3>
       <ul>
         ${order.items
-          .map(
-            (item: any) =>
-              `<li>${item.name} × ${item.qty}</li>`
-          )
+          .map((item: any) => `<li>${item.name} × ${item.qty}</li>`)
           .join("")}
       </ul>
-
-      <p><strong>Subtotal:</strong> ₦${order.subtotal}</p>
-      <p><strong>Delivery:</strong> ₦${order.delivery_fee}</p>
       <p><strong>Total:</strong> ₦${order.amount}</p>
-
       <p><strong>Reference:</strong> ${order.reference}</p>
     `;
 
-    const resendRes = await fetch("https://api.resend.com/emails", {
+    await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${RESEND_API_KEY}`,
@@ -61,31 +75,14 @@ serve(async (req) => {
       },
       body: JSON.stringify({
         from: "Live Out Loud <orders@liveoutloud.com.ng>",
-
-        // ✅ UPDATED EMAIL HERE
         to: ["livenoutloud26@gmail.com"],
-        
-
         subject: "🧾 New Order Received",
         html: emailHtml,
       }),
     });
 
-    const resendData = await resendRes.json();
-
-    if (!resendRes.ok) {
-      console.error("❌ Resend error:", resendData);
-      return new Response(
-        JSON.stringify({ error: "Email failed", resendData }),
-        { status: 500, headers: corsHeaders }
-      );
-    }
-
     return new Response(
-      JSON.stringify({
-        success: true,
-        message: "Email sent successfully 🚀",
-      }),
+      JSON.stringify({ success: true }),
       {
         headers: {
           ...corsHeaders,
@@ -94,7 +91,6 @@ serve(async (req) => {
       }
     );
   } catch (err) {
-    console.error("❌ Function error:", err);
     return new Response(
       JSON.stringify({ error: err.message }),
       { status: 500, headers: corsHeaders }

@@ -18,6 +18,13 @@ export default function AdminHeader({ onLogout }) {
             Analytics
           </Link>
 
+          <Link
+  to="/admin/orders"
+  className="px-4 py-2 rounded-xl bg-blue-500 text-white text-sm hover:opacity-90"
+>
+  Orders
+</Link>
+
           {/* Logout button */}
           <button
             onClick={onLogout}

@@ -8,6 +8,7 @@ import NotFound from "./pages/NotFound";
 
 import AdminProducts from "./admin/pages/AdminProducts";
 import AdminAnalytics from "./admin/pages/AdminAnalytics";
+import AdminOrders from "./admin/pages/AdminOrders"; // ✅ ADDED
 import CreatePin from "./admin/pages/CreatePin";
 import Admins from "./admin/pages/Admins";
 import AdminLayout from "./admin/AdminLayout";
@@ -44,6 +45,7 @@ export default function App() {
               <Route index element={<AdminProducts />} />
               <Route path="products" element={<AdminProducts />} />
               <Route path="analytics" element={<AdminAnalytics />} />
+              <Route path="orders" element={<AdminOrders />} /> {/* ✅ ADDED */}
               <Route path="admins" element={<Admins />} />
               <Route path="create-pin" element={<CreatePin />} />
             </Route>
