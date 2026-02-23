@@ -69,7 +69,7 @@ export default function AdminLayout() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-milk">
-        <p className="text-sm opacity-70">Checking admin access…..</p>
+        <p className="text-sm opacity-70">Checking admin access…</p>
       </div>
     );
   }
