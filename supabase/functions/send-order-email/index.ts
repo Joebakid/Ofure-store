@@ -63,7 +63,8 @@ serve(async (req) => {
         from: "Live Out Loud <orders@liveoutloud.com.ng>",
 
         // ✅ UPDATED EMAIL HERE
-        to: ["livenoutloud@gmail.com"],
+        to: ["livenoutloud26@gmali.com"],
+        
 
         subject: "🧾 New Order Received",
         html: emailHtml,
