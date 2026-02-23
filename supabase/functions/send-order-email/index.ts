@@ -60,11 +60,10 @@ serve(async (req) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        // ✅ MUST BE YOUR VERIFIED DOMAIN
         from: "Live Out Loud <orders@liveoutloud.com.ng>",
 
-        // ✅ SEND TO YOUR EMPLOYER EMAIL
-        to: ["livenoutloud26@gmail.com"],
+        // ✅ UPDATED EMAIL HERE
+        to: ["livenoutloud@gmail.com"],
 
         subject: "🧾 New Order Received",
         html: emailHtml,
