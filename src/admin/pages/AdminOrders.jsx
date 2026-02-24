@@ -7,10 +7,10 @@ import Loader from "../../components/Loader";
 export default function AdminOrders() {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [expandedId, setExpandedId] = useState(null);
 
-  // 🔢 Pagination state
   const [currentPage, setCurrentPage] = useState(1);
-  const ordersPerPage = 8; // Increased slightly as rows are now smaller
+  const ordersPerPage = 8;
 
   useEffect(() => {
     fetchOrders();
@@ -18,26 +18,35 @@ export default function AdminOrders() {
 
   async function fetchOrders() {
     setLoading(true);
+
     const { data, error } = await supabase
-      .from("shop_orders")
+      .from("orders")
       .select("*")
       .order("created_at", { ascending: false });
 
-    if (!error) setOrders(data || []);
+    if (error) {
+      console.error("Error fetching orders:", error);
+    } else {
+      setOrders(data || []);
+    }
+
     setLoading(false);
   }
 
   async function updateStatus(id, status) {
     setLoading(true);
-    await supabase
-      .from("shop_orders")
+
+    const { error } = await supabase
+      .from("orders")
       .update({ status })
       .eq("id", id);
+
+    if (error) console.error("Status update failed:", error);
 
     await fetchOrders();
   }
 
-  // 🔢 Pagination logic
+  // Pagination
   const totalPages = Math.ceil(orders.length / ordersPerPage);
   const indexOfLast = currentPage * ordersPerPage;
   const indexOfFirst = indexOfLast - ordersPerPage;
@@ -45,13 +54,14 @@ export default function AdminOrders() {
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8 relative min-h-screen">
-      {/* 🔄 LOADER */}
       {loading && <Loader />}
 
       <div className="flex items-center justify-between mb-8">
         <div className="flex items-center gap-4">
-          <BackButton to="/admin" label="Back" /> 
-          <h1 className="text-xl font-bold text-gray-800 my-7">Order Management</h1>
+          <BackButton to="/admin" label="Back" />
+          <h1 className="text-xl font-bold text-gray-800 my-7">
+            Order Management
+          </h1>
         </div>
         <div className="text-sm font-medium text-gray-500">
           Total: {orders.length} orders
@@ -64,37 +74,36 @@ export default function AdminOrders() {
         </div>
       ) : (
         <>
-          <div className="grid gap-2">
+          <div className="space-y-3">
             {currentOrders.map((order) => (
               <div
                 key={order.id}
-                className="flex flex-col md:flex-row md:items-center justify-between p-4 bg-white border border-gray-100 rounded-2xl hover:shadow-sm transition-all gap-4"
+                className="bg-white border rounded-2xl p-4 shadow-sm"
               >
-                {/* User Info */}
-                <div className="flex-1 min-w-[180px]">
-                  <p className="font-bold text-gray-900 leading-tight truncate">
-                    {order.name}
-                  </p>
-                  <p className="text-xs text-gray-500 truncate">{order.email}</p>
-                </div>
-
-                {/* Order Details Group */}
-                <div className="flex items-center gap-6">
-                  <div className="text-left md:text-right">
-                    <p className="text-[10px] uppercase tracking-wider text-gray-400 font-bold">Total</p>
-                    <p className="font-semibold text-sm">
-                      ₦{order.total?.toLocaleString()}
-                    </p>
+                {/* TOP ROW */}
+                <div className="flex flex-col md:flex-row justify-between gap-4">
+                  <div>
+                    <p className="font-bold text-lg">{order.name}</p>
+                    <p className="text-sm text-gray-500">{order.email}</p>
+                    <p className="text-sm text-gray-500">{order.phone}</p>
                   </div>
 
-                  {/* Status Badge */}
-                  <div className="w-24 text-center">
+                  <div className="text-right">
+                    <p className="font-semibold text-lg">
+                      ₦{order.amount?.toLocaleString()}
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      {new Date(order.created_at).toLocaleString()}
+                    </p>
+
                     <span
-                      className={`inline-block px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-tight ${
+                      className={`inline-block mt-2 px-3 py-1 rounded-full text-xs font-bold uppercase ${
                         order.status === "delivered"
                           ? "bg-green-100 text-green-700"
                           : order.status === "canceled"
                           ? "bg-red-100 text-red-600"
+                          : order.status === "paid"
+                          ? "bg-blue-100 text-blue-600"
                           : "bg-orange-100 text-orange-600"
                       }`}
                     >
@@ -103,37 +112,107 @@ export default function AdminOrders() {
                   </div>
                 </div>
 
-                {/* Actions */}
-                <div className="flex gap-2 border-t md:border-t-0 pt-3 md:pt-0">
-                  {order.status !== "delivered" && (
+                {/* ACTIONS */}
+                {order.status === "paid" && (
+                  <div className="flex gap-2 mt-4">
                     <button
-                      onClick={() => updateStatus(order.id, "delivered")}
-                      className="flex-1 md:flex-none px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-xl text-xs font-bold transition-colors"
+                      onClick={() =>
+                        updateStatus(order.id, "delivered")
+                      }
+                      className="px-4 py-2 bg-green-600 text-white rounded-xl text-xs font-bold"
                     >
-                      Deliver
+                      Mark Delivered
                     </button>
-                  )}
-                  {order.status === "pending" && (
+
                     <button
-                      onClick={() => updateStatus(order.id, "canceled")}
-                      className="flex-1 md:flex-none px-4 py-2 border border-red-200 text-red-600 hover:bg-red-50 rounded-xl text-xs font-bold transition-colors"
+                      onClick={() =>
+                        updateStatus(order.id, "canceled")
+                      }
+                      className="px-4 py-2 border border-red-300 text-red-600 rounded-xl text-xs font-bold"
                     >
                       Cancel
                     </button>
-                  )}
-                </div>
+                  </div>
+                )}
+
+                {/* EXPAND BUTTON */}
+                <button
+                  onClick={() =>
+                    setExpandedId(
+                      expandedId === order.id ? null : order.id
+                    )
+                  }
+                  className="text-sm text-mauve mt-4 underline"
+                >
+                  {expandedId === order.id
+                    ? "Hide Details"
+                    : "View Details"}
+                </button>
+
+                {/* EXPANDED SECTION */}
+                {expandedId === order.id && (
+                  <div className="mt-4 border-t pt-4 text-sm space-y-2 bg-gray-50 p-4 rounded-xl">
+                    <p>
+                      <strong>Phone:</strong> {order.phone}
+                    </p>
+                    <p>
+                      <strong>Address:</strong> {order.address}
+                    </p>
+                    <p>
+                      <strong>Reference:</strong> {order.reference}
+                    </p>
+
+                    <div className="border-t pt-2 mt-2">
+                      <p>
+                        <strong>Subtotal:</strong> ₦
+                        {order.subtotal?.toLocaleString()}
+                      </p>
+                      <p>
+                        <strong>Delivery Fee:</strong> ₦
+                        {order.delivery_fee?.toLocaleString()}
+                      </p>
+                      <p className="font-semibold">
+                        <strong>Total:</strong> ₦
+                        {order.amount?.toLocaleString()}
+                      </p>
+                    </div>
+
+                    {/* ITEMS */}
+                    <div className="border-t pt-2 mt-2">
+                      <p className="font-semibold mb-2">
+                        Ordered Items:
+                      </p>
+
+                      {order.items?.map((item, index) => (
+                        <div
+                          key={index}
+                          className="flex justify-between text-xs bg-white p-2 rounded mb-1"
+                        >
+                          <span>
+                            {item.name} × {item.qty}
+                          </span>
+                          <span>
+                            ₦
+                            {(item.price * item.qty).toLocaleString()}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             ))}
           </div>
 
-          {/* 🔢 PAGINATION */}
-          <div className="mt-8 flex justify-center">
-            <Pagination
-              currentPage={currentPage}
-              totalPages={totalPages}
-              onPageChange={(page) => setCurrentPage(page)}
-            />
-          </div>
+          {totalPages > 1 && (
+            <div className="mt-8 flex justify-center">
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={(page) => setCurrentPage(page)}
+              />
+            </div>
+          )}
         </>
       )}
     </div>
