@@ -6,7 +6,7 @@ import { supabase } from "../lib/supabase";
 import { payWithPaystack } from "../lib/paystack";
 
 /* ================= DELIVERY CONFIG ================= */
-const BASE_DELIVERY_FEE = 100; // Starts at ₦3000 (can increase up to ₦5,000)
+const BASE_DELIVERY_FEE = 3000; // Starts at ₦3000 (can increase up to ₦5,000)
 /* =================================================== */
 
 export default function CartModal() {
